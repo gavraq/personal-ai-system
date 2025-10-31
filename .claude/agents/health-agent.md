@@ -72,60 +72,130 @@ Provide health analytics, performance insights, and data-driven recommendations 
 - Direct SQL queries MUST use `metric_value_converted` column
 
 ### Python Health Client
+
+**IMPORTANT**: The health agent has **two distinct sub-integrations**:
+
+1. **Parkrun API** - Direct queries to parkrun.com (external service)
+2. **Apple Health Data** - Queries YOUR health service on Pi via REST API
+
 ```python
 import os
-from integrations.health.python_client import HealthClient
+import requests
 
 # Environment-aware service URL
 # For containerized environment (Pi/Docker):
-base_url = os.getenv('HEALTH_SERVICE_URL', 'http://health-service:3001')
+base_url = os.getenv('HEALTH_SERVICE_URL', 'https://health.gavinslater.co.uk')
 
 # For local Mac development:
 # base_url = 'http://localhost:3001'
 
-client = HealthClient(base_url=base_url)
+# ===== APPLE HEALTH METRICS (via Health Service REST API) =====
 
-# Parkrun statistics
-stats = client.get_parkrun_stats()
+# Sleep analysis with detailed stages
+response = requests.get(f'{base_url}/api/apple-health/metrics/sleep?days=7&limit=10')
+sleep_data = response.json()['data']
+# Returns: total sleep, deep/core/REM breakdown, sleep start/end times, awake time
 
-# Apple Health metrics with device priority
-steps = client.get_metric_with_priority(
-    metric_type='step_count',
-    date_start='2025-10-06 00:00:00',
-    date_end='2025-10-07 00:00:00'
-)  # Returns Apple Watch data only
+# Step count
+response = requests.get(f'{base_url}/api/apple-health/metrics/steps?days=7')
+steps_data = response.json()['data']
 
-# Weekly health summary
-summary = client.get_health_summary(days=7)
+# Heart rate (high volume - use limit parameter)
+response = requests.get(f'{base_url}/api/apple-health/metrics/heart-rate?days=1&limit=100')
+hr_data = response.json()['data']
+
+# Active energy (calories burned)
+response = requests.get(f'{base_url}/api/apple-health/metrics/active-energy?days=7')
+energy_data = response.json()['data']
+
+# Body weight
+response = requests.get(f'{base_url}/api/apple-health/metrics/body-weight?days=30')
+weight_data = response.json()['data']
+
+# Exercise minutes
+response = requests.get(f'{base_url}/api/apple-health/metrics/exercise-minutes?days=7')
+exercise_data = response.json()['data']
+
+# ===== PARKRUN DATA (separate integration via Parkrun API) =====
+
+# Parkrun statistics - queries parkrun.com directly
+response = requests.get(f'{base_url}/api/parkrun/stats')
+parkrun_stats = response.json()['data']
+
+# Parkrun results for specific year
+response = requests.get(f'{base_url}/api/parkrun/results/2025')
+parkrun_results = response.json()['data']
 ```
 
 ### REST API Endpoints
+
+**Base URL**:
+- Production: `https://health.gavinslater.co.uk`
+- Local Mac: `http://localhost:3001`
+- Docker container: `http://health-service:3001`
+
 ```bash
-# Parkrun
+# ===== PARKRUN (External API Integration) =====
 GET /api/parkrun/stats         # All statistics
 GET /api/parkrun/results/2025  # 2025 results
 GET /api/parkrun/trends        # Performance trends
 
-# Apple Health Metrics (specify metric_type and optional days=30, limit=100)
-GET /api/apple-health/metrics/steps
-GET /api/apple-health/metrics/heart-rate
-GET /api/apple-health/metrics/active-energy
-GET /api/apple-health/metrics/walking-distance
-GET /api/apple-health/metrics/body-weight
-GET /api/apple-health/metrics/exercise-minutes
-GET /api/apple-health/metrics/flights-climbed
-GET /api/apple-health/metrics/resting-heart-rate
-GET /api/apple-health/metrics/hrv
-GET /api/apple-health/metrics/sleep
+# ===== APPLE HEALTH METRICS (Your Health Service API) =====
+# Query pattern: /api/apple-health/metrics/:type?days=30&limit=100
 
-# Apple Health Summary & Stats
-GET /api/apple-health/summary?days=7
-GET /api/apple-health/daily/2025-10-10
-GET /api/apple-health/auto-export/stats
-GET /api/apple-health/auto-export/recent?days=7
+GET /api/apple-health/metrics/sleep?days=7              # Sleep + stages (deep/core/REM)
+GET /api/apple-health/metrics/steps?days=7              # Daily step count
+GET /api/apple-health/metrics/heart-rate?days=1&limit=100   # Continuous HR (high volume!)
+GET /api/apple-health/metrics/active-energy?days=7      # Calories burned
+GET /api/apple-health/metrics/walking-distance?days=7   # Distance walked/run
+GET /api/apple-health/metrics/body-weight?days=30       # Body weight
+GET /api/apple-health/metrics/exercise-minutes?days=7   # Exercise ring minutes
+GET /api/apple-health/metrics/flights-climbed?days=7    # Flights of stairs
+GET /api/apple-health/metrics/resting-heart-rate?days=30  # Daily resting HR
+GET /api/apple-health/metrics/hrv?days=30               # Heart rate variability
+
+# Other endpoints
+GET /api/apple-health/summary?days=7                    # Summary (Parkrun only currently)
+GET /api/apple-health/daily/2025-10-10                  # Daily breakdown
+GET /api/apple-health/auto-export/stats                 # Auto-export statistics
+GET /api/apple-health/auto-export/recent?days=7         # Recent imports
 ```
 
-**Supported Metric Types**:
+### Available Apple Health Metrics
+
+**Complete list** of 24 metric types (5.3M+ records, 2010-2025):
+
+| API Parameter | Database Metric Type | Record Count | Description |
+|---------------|---------------------|--------------|-------------|
+| `sleep` | sleep_analysis | 29,931 | Total sleep + stages (deep/core/REM/awake) |
+| `steps` | step_count | 493,525 | Daily step count |
+| `heart-rate` | heart_rate | 938,199 | Continuous heart rate (use limit!) |
+| `active-energy` | active_energy | 1,857,143 | Active calories burned |
+| `walking-distance` | walking_running_distance | 615,818 | Distance walked/run |
+| `body-weight` | weight_body_mass | 4,128 | Body weight measurements |
+| `exercise-minutes` | apple_exercise_time | 133,293 | Exercise ring minutes |
+| `flights-climbed` | flights_climbed | 51,140 | Flights of stairs climbed |
+| `resting-heart-rate` | resting_heart_rate | 2,491 | Daily resting heart rate |
+| `hrv` | heart_rate_variability | 14,654 | Heart rate variability |
+
+**Additional metrics in database** (not yet mapped in API):
+- basal_energy_burned (660,732 records)
+- physical_effort (282,573 records)
+- apple_stand_time (119,782 records)
+- walking_speed (64,409 records)
+- body_fat_percentage (4,794 records)
+- body_mass_index (4,564 records)
+- vo2_max (1,647 records)
+- cardio_recovery (141 records)
+
+### Environment Variables
+
+**HEALTH_SERVICE_URL**: Set in claude-agent-server docker-compose.yml
+- Production: `https://health.gavinslater.co.uk`
+- Docker network: `http://health-service:3001`
+- Local Mac: `http://localhost:3001`
+
+**Supported Metric Types (Legacy)**:
 - `steps` (maps to step_count)
 - `heart-rate` (heart_rate)
 - `active-energy` (active_energy)
