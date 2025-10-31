@@ -73,9 +73,17 @@ Provide health analytics, performance insights, and data-driven recommendations 
 
 ### Python Health Client
 ```python
-from health_data_client import HealthClient
+import os
+from integrations.health.python_client import HealthClient
 
-client = HealthClient(base_url='http://localhost:3001')
+# Environment-aware service URL
+# For containerized environment (Pi/Docker):
+base_url = os.getenv('HEALTH_SERVICE_URL', 'http://health-service:3001')
+
+# For local Mac development:
+# base_url = 'http://localhost:3001'
+
+client = HealthClient(base_url=base_url)
 
 # Parkrun statistics
 stats = client.get_parkrun_stats()
@@ -225,9 +233,28 @@ AND metric_date < '2025-10-15 00:00:00';
 ## Technical Implementation
 
 ### Service Management
+
+**Production (Pi - Docker)**:
 ```bash
-# Start health service (required for all queries)
-cd /Users/gavinslater/projects/life/health-integration/health-service
+# Service runs automatically via docker-compose
+# Check status
+docker ps | grep health-service
+
+# View logs
+docker logs health-service -f
+
+# Restart service
+cd ~/docker/health-service && docker-compose restart
+
+# Check connectivity
+curl http://health-service:3001/health  # From within Docker network
+curl http://192.168.5.190:3001/health    # From external
+```
+
+**Local Development (Mac)**:
+```bash
+# Start health service
+cd /Users/gavinslater/projects/life/services/health-service
 npm start  # Runs on localhost:3001
 
 # Check service status
@@ -238,7 +265,7 @@ tail -f logs/health-service.log
 ```
 
 ### Database Details
-- **Location**: `health-integration/health-service/data/health.db`
+- **Location**: `services/health-service/data/health.db`
 - **Size**: ~450MB for 5.3M records
 - **Schema**: health_metrics table with unique constraint on (metric_type, metric_source, metric_date, metric_value)
 - **Indexes**: Optimized for metric_type, metric_date, metric_source queries
