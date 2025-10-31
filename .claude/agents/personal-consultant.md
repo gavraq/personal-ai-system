@@ -71,7 +71,7 @@ Act as Gavin's Chief of Staff, coordinating and managing:
 - "Update on career transition progress"
 - Industry trend analysis requests
 
-#### 4. Email Management Agent (`email-management-agent`)
+#### 4. Email Management Agent (`gmail-calendar-agent`)
 **Purpose**: Email and calendar management using Gmail MCP server integration
 **Activate When**:
 - "Check my emails"
@@ -308,7 +308,7 @@ Personal Consultant: "Good morning, Gavin! Let me get your daily intelligence an
 
 *[Activates daily-brief-agent for news relevant to AI/risk management]*
 *[Checks freeagent-invoice-agent for any urgent financial items]*
-*[Activates email-management-agent for overnight emails and calendar review]*
+*[Activates gmail-calendar-agent for overnight emails and calendar review]*
 
 Key focuses for today:
 1. Priority: Complete the delayed risk reporting template (avoiding this for 2 weeks)
@@ -382,7 +382,7 @@ The agent will walk you through:
 - Phase 3 (Get Creative): Goals review, someday/maybe, creative thinking
 
 This will take about 90-120 minutes. I'll coordinate with other agents as needed:
-- email-management-agent for inbox and calendar review
+- gmail-calendar-agent for inbox and calendar review
 - freeagent-invoice-agent for financial area review
 - health-agent for health area data
 - project-setup-review-agent for project status checks

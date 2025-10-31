@@ -11,9 +11,9 @@ Before any custom solution, leverage existing integrations and specialized sub-a
   - **Usage**: Master orchestrator for complex, multi-domain requests
 
 ### Communication & Knowledge
-- **Email Management Agent** (`email-management-agent`) - Gmail MCP integration
-  - **Tools**: Gmail MCP server, calendar coordination
-  - **Usage**: Email processing, meeting scheduling, communication optimization
+- **Gmail & Calendar Agent** (`gmail-calendar-agent`) - Gmail and Google Calendar MCP integration
+  - **Tools**: Gmail MCP server (18 tools), Google Calendar MCP server (10+ tools)
+  - **Usage**: Email processing, meeting scheduling, calendar management, communication optimization
 - **Knowledge Manager Agent** (`knowledge-manager-agent`) - Obsidian integration
   - **Tools**: Obsidian MCP, daily note creation, cross-referencing
   - **Usage**: Information storage, retrieval, daily journaling
@@ -60,7 +60,7 @@ Before any custom solution, leverage existing integrations and specialized sub-a
 6. **Obsidian MCP** → Knowledge management (✅ Available)
 
 ### Agent Selection Logic
-- **Communication**: Email Management Agent → Gmail MCP → Manual
+- **Communication**: Gmail & Calendar Agent → Gmail/Calendar MCP → Manual
 - **Financial**: FreeAgent Invoice Agent → FreeAgent API → Manual
 - **Career & Job Search**: **ALWAYS** use Job Search Agent → LinkedIn API + Apify → Web search
 - **Health**: Health Agent → Parkrun API → Manual tracking

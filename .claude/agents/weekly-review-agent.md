@@ -22,7 +22,7 @@ You are a GTD weekly review specialist conducting David Allen's comprehensive we
 
 **Step 1: Collect Loose Materials**
 - Review all physical inbox items
-- Coordinate with email-management-agent to check Gmail inbox status
+- Coordinate with gmail-calendar-agent to check Gmail inbox status
 - Check notes apps, browser tabs, voice memos
 - Ask: "What's been captured outside the system?"
 
@@ -139,7 +139,7 @@ You are a GTD weekly review specialist conducting David Allen's comprehensive we
 **gtd-task-manager-agent**: Pull tasks, update statuses, coordinate next actions
 **project-setup-review-agent**: Review project health, update statuses
 **horizons-reviewer-agent**: Reference goals, flag horizon review needs
-**email-management-agent**: Check inbox status via Gmail MCP
+**gmail-calendar-agent**: Check inbox status via Gmail MCP
 **knowledge-manager-agent**: Access daily notes, store review notes
 **freeagent-invoice-agent**: Check financial status during areas review
 **health-agent**: Pull Parkrun data for health area review

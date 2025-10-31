@@ -29,12 +29,12 @@
 
 ### Agent Orchestration
 **Morning Planning** (Manual trigger: `/daily-journal-morning`):
-- PARALLEL: health-agent (sleep + energy), email-management-agent (calendar + emails), location-agent (day pattern)
+- PARALLEL: health-agent (sleep + energy), gmail-calendar-agent (calendar + emails), location-agent (day pattern)
 - SEQUENTIAL: GTD Dashboard analysis, Met Office weather, 7-day pattern analysis
 - OUTPUT: Energy outlook, top 3 priorities, project opportunities, proactive suggestions
 
 **Evening Reflection** (Manual trigger: `/daily-journal-evening`):
-- PARALLEL: location-agent (movement), health-agent (metrics), email-management-agent (events), gtd-task-manager-agent (completion)
+- PARALLEL: location-agent (movement), health-agent (metrics), gmail-calendar-agent (events), gtd-task-manager-agent (completion)
 - SEQUENTIAL: 7-day pattern analysis, habit streak calculation, energy prediction validation
 - OUTPUT: Accomplishments, health metrics, habit tracking, pattern insights, tomorrow's focus
 
@@ -49,7 +49,7 @@
 **Connected Agents**:
 - `health-agent`: Apple Health (5.3M records) + parkrun API
 - `location-agent`: Owntracks geolocation + movement analysis
-- `email-management-agent`: Gmail MCP (calendar + communications)
+- `gmail-calendar-agent`: Gmail & Google Calendar MCP (calendar + communications)
 - `gtd-task-manager-agent`: Obsidian Tasks + GTD Dashboard
 - `knowledge-manager-agent`: Obsidian vault file operations
 
@@ -85,7 +85,7 @@
 - **File Operations**: Knowledge Manager Agent (`knowledge-manager-agent`)
 - **Health Data**: Health Agent (`health-agent`)
 - **Movement Data**: Location Agent (`location-agent`)
-- **Communications**: Email Management Agent (`email-management-agent`)
+- **Communications**: Gmail & Calendar Agent (`gmail-calendar-agent`)
 - **Task Management**: GTD Task Manager Agent (`gtd-task-manager-agent`)
 
 ### Command Interface

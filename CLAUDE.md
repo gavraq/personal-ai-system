@@ -84,7 +84,7 @@ User Request → Context Assessment → Agent Selection → Context Loading → 
 
 ### Specialized Agents Portfolio
 - **Personal Consultant** (`personal-consultant`) - Master orchestrator with goal alignment
-- **Email Management** (`email-management-agent`) - Gmail MCP integration
+- **Gmail & Calendar** (`gmail-calendar-agent`) - Gmail & Google Calendar MCP integration
 - **FreeAgent Invoice** (`freeagent-invoice-agent`) - Financial operations
 - **Job Search** (`job-search-agent`) - LinkedIn + AI career transition
 - **Health** (`health-agent`) - Parkrun + quantified self
@@ -197,7 +197,7 @@ Every interaction connects to:
 .claude/                          # Claude Code configuration
 ├── agents/                       # CONDITIONALLY LOADED - Full agent definitions
 │   ├── personal-consultant.md
-│   ├── email-management-agent.md
+│   ├── gmail-calendar-agent.md
 │   ├── freeagent-invoice-agent.md
 │   ├── job-search-agent.md
 │   ├── health-agent.md

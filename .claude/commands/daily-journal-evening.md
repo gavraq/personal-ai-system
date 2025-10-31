@@ -23,7 +23,7 @@ Task: daily-journal-agent "Execute evening reflection for [YYYY-MM-DD DayName].
 REQUIREMENTS:
 1. Fetch location data via location-agent (today's movement)
 2. Fetch health metrics via health-agent (steps, energy, heart rate)
-3. Fetch calendar summary via email-management-agent (today's events)
+3. Fetch calendar summary via gmail-calendar-agent (today's events)
 4. Fetch weather (today's conditions)
 5. Calculate habit streaks from last 7 daily notes
 6. Update daily note with CONCISE sections:

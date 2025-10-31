@@ -29,4 +29,4 @@
 - **Data Storage**: ~/.config/freeagent/config.json
 
 ---
-*Full implementation details: `/Users/gavinslater/projects/life/freeagent_subagent/CLAUDE.md`*
+*Full implementation details: `/Users/gavinslater/projects/life/integrations/freeagent/CLAUDE.md`*

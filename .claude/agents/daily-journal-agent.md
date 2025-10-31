@@ -174,7 +174,7 @@ Request: "Provide complete sleep data for last night (YYYY-MM-DD): total sleep, 
 
 **Step 2: Fetch Calendar Events**
 ```
-Use Task tool with subagent_type: "email-management-agent"
+Use Task tool with subagent_type: "gmail-calendar-agent"
 Request: "Retrieve today's calendar events for YYYY-MM-DD. Provide list with times, titles, descriptions. If no events, state 'No calendar events scheduled.'"
 ```
 
@@ -302,7 +302,7 @@ Request: "Provide health metrics for [TODAY YYYY-MM-DD]: steps, active energy, e
 
 **Step 3: Fetch Today's Calendar**
 ```
-Use Task tool with subagent_type: "email-management-agent"
+Use Task tool with subagent_type: "gmail-calendar-agent"
 Request: "Retrieve today's calendar events for [TODAY YYYY-MM-DD]. Provide summary of meetings attended."
 ```
 
@@ -365,11 +365,11 @@ Format: 2-3 lines for morning, day summary, commute/WFH impact
 
 ### Using Task Tool with Email-Management-Agent
 
-For **morning briefing**, use the Task tool to invoke `email-management-agent`:
+For **morning briefing**, use the Task tool to invoke `gmail-calendar-agent`:
 
 ```markdown
 Task(
-  subagent_type: "email-management-agent",
+  subagent_type: "gmail-calendar-agent",
   description: "Get today's calendar and overnight emails",
   prompt: "Please provide:
     1. Today's calendar events (date: YYYY-MM-DD) with times, titles, durations
