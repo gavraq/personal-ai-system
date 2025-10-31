@@ -1,0 +1,36 @@
+{
+  "searches": [],
+  "saved_jobs": [
+    {
+      "id": "job_1",
+      "saved_date": "2025-08-08T11:06:38.934298",
+      "title": "Senior AI Risk Analyst",
+      "company": "Barclays",
+      "location": "London",
+      "url": "https://linkedin.com/jobs/test-123",
+      "match_score": 85.0,
+      "source": "LinkedIn"
+    }
+  ],
+  "applications": [
+    {
+      "id": "app_1",
+      "application_date": "2025-08-08T11:06:38.934372",
+      "job_info": {
+        "title": "Senior AI Risk Analyst",
+        "company": "Barclays",
+        "location": "London",
+        "url": "https://linkedin.com/jobs/test-123",
+        "match_score": 85.0,
+        "source": "LinkedIn"
+      },
+      "application_data": {
+        "applied_via": "LinkedIn",
+        "cover_letter_sent": true,
+        "follow_up_date": "2025-01-20"
+      },
+      "status": "applied"
+    }
+  ],
+  "last_search": null
+}

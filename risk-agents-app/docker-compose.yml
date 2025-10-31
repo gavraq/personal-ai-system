@@ -1,0 +1,71 @@
+# Docker Compose - Orchestrates Backend + Frontend Containers
+# Single environment configuration (development and production use same file)
+# Run with: docker-compose up
+
+version: '3.8'
+
+services:
+  # Backend Service - Python FastAPI + Claude Agent SDK
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: risk-agents-backend
+    ports:
+      - "8050:8050"  # Map port 8050 on host to port 8050 in container
+    volumes:
+      # Mount backend code for hot-reload (code changes reflect immediately)
+      - ./backend:/app
+      # Mount skills directory (important for Skills Framework)
+      - ./backend/.claude/skills:/app/.claude/skills
+      # Mount knowledge directory
+      - ./backend/knowledge:/app/knowledge
+      # Mount context directory (session storage)
+      - ./backend/context:/app/context
+    environment:
+      # Environment variables from .env file
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    restart: unless-stopped
+    networks:
+      - risk-agents
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service - Next.js 15
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: risk-agents-frontend
+    ports:
+      - "3050:3050"  # Map port 3050 on host to port 3050 in container
+    volumes:
+      # Mount frontend code for hot-reload
+      - ./frontend:/app
+      # Exclude node_modules and .next from mount (these should stay in container)
+      - /app/node_modules
+      - /app/.next
+    environment:
+      # Frontend environment variables
+      # Note: NEXT_PUBLIC_ vars are used in the browser, so they must use localhost
+      # Server-side API calls should use the internal backend hostname
+      - NEXT_PUBLIC_API_URL=http://localhost:8050
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8050
+      - NEXTAUTH_URL=http://localhost:3050
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - backend  # Frontend starts after backend is ready
+    restart: unless-stopped
+    networks:
+      - risk-agents
+
+# Custom network for container communication
+networks:
+  risk-agents:
+    driver: bridge

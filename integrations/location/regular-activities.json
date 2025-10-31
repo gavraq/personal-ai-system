@@ -1,0 +1,105 @@
+{
+  "recurring_activities": {
+    "duke_of_edinburgh_volunteering": {
+      "activity": "Wimbledon Greyhound Welfare - Dog Walking",
+      "participants": ["Gavin", "Kimberly"],
+      "purpose": "Duke of Edinburgh Silver Award volunteering requirement",
+      "location": "Hersham (despite organization name)",
+      "typical_schedule": "Sunday mornings ~11am",
+      "duration": "2-3 hours including travel",
+      "location_markers": ["Hersham", "KT12", "dog welfare", "volunteering", "greyhound welfare"],
+      "context": "Family activity supporting Kimberly's Duke of Edinburgh Silver Award. Note: Organization is named 'Wimbledon Greyhound Welfare' but located in Hersham"
+    },
+    "parkrun_activities": {
+      "activity": "Parkrun participation",
+      "participants": ["Gavin"],
+      "purpose": "Health and fitness routine",
+      "locations": ["Esher Common", "Bushy Park", "Richmond Park", "Wimbledon Common", "Bath Skyline"],
+      "typical_schedule": "Saturday mornings 9am",
+      "duration": "~45 minutes at location",
+      "travel_mode": "Cycle to Bushy Park (5.7km), walk to Esher Common (1.6km)",
+      "location_markers": ["parkrun", "running", "fitness"],
+      "location_coordinates": {
+        "Bushy Park": {"lat": 51.4088, "lon": -0.3328},
+        "Esher Common": {"lat": 51.351, "lon": -0.367},
+        "Bath Skyline": {"lat": 51.395, "lon": -2.360}
+      },
+      "context": "Regular Saturday morning fitness activity. Typically cycles to Bushy Park. Bath Skyline occasionally when visiting Zachary at university"
+    },
+    "dog_walking": {
+      "activity": "Dog walking with Roxy",
+      "participants": ["Gavin", "Roxy (dog)"],
+      "purpose": "Daily exercise and pet care",
+      "primary_location": "Black Pond, Esher Common",
+      "typical_schedule": "Evening walks (5pm-8pm)",
+      "duration": "30-60 minutes",
+      "distance": "1.6-2km from home",
+      "location_coordinates": {"lat": 51.351, "lon": -0.367},
+      "location_markers": ["Esher Common", "Black Pond", "dog walk", "evening walk"],
+      "velocity_pattern": "Walking speed (0.5-2 m/s)",
+      "context": "Regular evening activity, especially on WFH days. Black Pond circular route is preferred"
+    },
+    "office_commute": {
+      "activity": "London office commute",
+      "participants": ["Gavin"],
+      "purpose": "Work travel",
+      "route": "Esher → London Waterloo → Gresham Street",
+      "typical_schedule": "6:52am departure, 7:50am arrival",
+      "duration": "~1 hour each way",
+      "frequency": "3 days per week (typically Mon/Tue/Thu)",
+      "context": "Primary work travel pattern"
+    },
+    "university_visits": {
+      "activity": "University of Bath visits (Zachary)",
+      "participants": ["Gavin", "Zachary"],
+      "purpose": "Student drop-off/pick-up, family support",
+      "location": "Bath, Somerset",
+      "distance": "~100 miles from Esher",
+      "duration": "Full day trip (6+ hours including travel)",
+      "frequency": "Occasional (term starts, emergencies, planned visits)",
+      "opportunity_activities": ["Bath Skyline Parkrun", "Bath city centre exploration", "university campus visits"],
+      "location_markers": ["Bath", "University of Bath", "Somerset", "BA1", "BA2"],
+      "context": "Family commitment combined with opportunity for Bath-area activities. Often includes Parkrun participation."
+    }
+  },
+  "family_commitments": {
+    "zachary_activities": {
+      "university": {
+        "institution": "University of Bath",
+        "course": "Integrated Mechanical & Electrical Engineering",
+        "location": "Bath, Somerset",
+        "father_involvement": "Occasional drop-offs/pick-ups, family support visits"
+      }
+    },
+    "kimberly_activities": {
+      "school_runs": {
+        "activity": "School drop-off",
+        "typical_schedule": "Morning 7:45-8:00am (weekdays)",
+        "location": "Kimberly's School",
+        "location_coordinates": {"lat": 51.3583, "lon": -0.3691},
+        "distance": "1.2km from home",
+        "duration": "10-15 minutes round trip",
+        "context": "Regular weekday morning routine"
+      },
+      "duke_of_edinburgh": {
+        "award_level": "Silver",
+        "volunteering_component": "Wimbledon Greyhound Welfare",
+        "typical_involvement": "Sunday mornings with father accompaniment"
+      }
+    },
+    "medical_appointments": {
+      "kingston_hospital": {
+        "location": "Kingston Hospital NHS Trust",
+        "location_coordinates": {"lat": 51.4150, "lon": -0.2820},
+        "distance": "~7km from home",
+        "typical_uses": ["Dermatology appointments", "Medical consultations", "Emergency care"],
+        "recent_visits": ["Oct 10, 2025 - Ryan dermatology appointment (11:30am-12:30pm)"],
+        "context": "Primary NHS hospital for family medical appointments"
+      }
+    },
+    "weekend_patterns": {
+      "saturday": "Parkrun (Gavin) + family activities",
+      "sunday": "Family time + Duke of Edinburgh activities (Kimberly)"
+    }
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "home": {
+    "name": "Home",
+    "lat": 51.365647,
+    "lon": -0.361388,
+    "radius": 100,
+    "category": "primary",
+    "description": "Home in Esher, Surrey"
+  },
+  "work": {
+    "office_gresham_street": {
+      "name": "ICBC Standard Bank Office",
+      "lat": 51.5155,
+      "lon": -0.0922,
+      "radius": 200,
+      "category": "work",
+      "description": "Primary office location in London"
+    },
+    "esher_station": {
+      "name": "Esher Station",
+      "lat": 51.3707,
+      "lon": -0.3638,
+      "radius": 150,
+      "category": "transport",
+      "description": "Commute starting point"
+    },
+    "waterloo_station": {
+      "name": "London Waterloo",
+      "lat": 51.5031,
+      "lon": -0.1132,
+      "radius": 300,
+      "category": "transport",
+      "description": "London terminal station"
+    }
+  },
+  "health": {
+    "kingston_hospital": {
+      "name": "Kingston Hospital",
+      "lat": 51.4150,
+      "lon": -0.2820,
+      "radius": 200,
+      "category": "medical",
+      "description": "NHS hospital for family medical appointments",
+      "typical_visits": "Medical appointments, dermatology, emergency care"
+    }
+  },
+  "fitness": {
+    "bushy_park_parkrun": {
+      "name": "Bushy Park parkrun",
+      "lat": 51.4088,
+      "lon": -0.3328,
+      "radius": 300,
+      "category": "fitness",
+      "description": "Regular Saturday parkrun location",
+      "typical_schedule": "Saturday 9:00am",
+      "travel_mode": "Cycle (5.7km from home)"
+    },
+    "esher_common_parkrun": {
+      "name": "Esher Common (Black Pond)",
+      "lat": 51.351,
+      "lon": -0.367,
+      "radius": 400,
+      "category": "fitness",
+      "description": "Home parkrun location and dog walking area",
+      "typical_schedule": "Saturday 9:00am parkrun, evening dog walks",
+      "activities": ["parkrun", "dog walks with Roxy"]
+    },
+    "black_pond": {
+      "name": "Black Pond Walking Route",
+      "lat": 51.351,
+      "lon": -0.367,
+      "radius": 500,
+      "category": "recreation",
+      "description": "Regular dog walking route with Roxy",
+      "typical_schedule": "Evening walks (5pm-8pm)",
+      "distance_from_home": "1.6-2km"
+    }
+  },
+  "family": {
+    "kimberly_school": {
+      "name": "Kimberly's School",
+      "lat": 51.3583,
+      "lon": -0.3691,
+      "radius": 150,
+      "category": "education",
+      "description": "School drop-off location for Kimberly (age 15)",
+      "typical_schedule": "Morning drop-off 7:45-8:00am",
+      "distance_from_home": "1.2km"
+    },
+    "wimbledon_greyhound_welfare": {
+      "name": "Wimbledon Greyhound Welfare (Hersham)",
+      "lat": 51.368,
+      "lon": -0.400,
+      "radius": 200,
+      "category": "volunteering",
+      "description": "Duke of Edinburgh volunteering with Kimberly",
+      "typical_schedule": "Sunday mornings ~11am",
+      "note": "Organization name says Wimbledon but located in Hersham"
+    }
+  },
+  "university": {
+    "bath": {
+      "name": "University of Bath",
+      "lat": 51.3781,
+      "lon": -2.3299,
+      "radius": 1000,
+      "category": "education",
+      "description": "Zachary's university - Integrated Mechanical & Electrical Engineering",
+      "typical_visits": "Occasional drop-offs/pick-ups, family support",
+      "distance_from_home": "~100 miles"
+    },
+    "bath_skyline_parkrun": {
+      "name": "Bath Skyline parkrun",
+      "lat": 51.395,
+      "lon": -2.360,
+      "radius": 300,
+      "category": "fitness",
+      "description": "parkrun location when visiting Zachary at university",
+      "typical_schedule": "Saturday 9:00am when in Bath"
+    }
+  },
+  "location_intelligence": {
+    "cycling_speed_range": {
+      "min_velocity": 4.0,
+      "max_velocity": 10.0,
+      "unit": "m/s",
+      "description": "Typical cycling speed (14-36 km/h)"
+    },
+    "running_speed_range": {
+      "min_velocity": 2.0,
+      "max_velocity": 4.0,
+      "unit": "m/s",
+      "description": "Typical running/jogging speed (7-14 km/h)"
+    },
+    "walking_speed_range": {
+      "min_velocity": 0.5,
+      "max_velocity": 2.0,
+      "unit": "m/s",
+      "description": "Typical walking speed (2-7 km/h)"
+    },
+    "stationary_threshold": {
+      "max_velocity": 1.0,
+      "unit": "m/s",
+      "description": "Below this velocity considered stationary"
+    }
+  }
+}

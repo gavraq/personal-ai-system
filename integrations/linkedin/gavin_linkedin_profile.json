@@ -1,0 +1,223 @@
+{
+  "profile_url": "https://www.linkedin.com/in/gavinslater/",
+  "last_updated": "2025-08-09T16:30:00.000000",
+  "data_source": "LinkedIn Profile Export PDF",
+  "basic_info": {
+    "name": "Gavin Slater",
+    "headline": "Head of Risk Infrastructure",
+    "location": "Esher, England, United Kingdom",
+    "current_position": "Head of Risk Infrastructure at ICBC Standard Bank Plc",
+    "industry": "Financial Services",
+    "phone": "+447711249774",
+    "email": "gavin@slaters.uk.com",
+    "websites": [
+      "www.stream-financial.com",
+      "www.new-paradigmconsulting.com"
+    ]
+  },
+  "experience": [
+    {
+      "company": "ICBC Standard Bank Plc",
+      "position": "Head of Risk Infrastructure",
+      "duration": "February 2021 - Present (4 years 7 months)",
+      "location": "London Area, United Kingdom",
+      "description": "Working for Chief Risk Officer to help develop Target Operating Model for Risk Department",
+      "key_responsibilities": [
+        "Risk Reporting & Validation: responsible for day to day reporting & analysis tasks on behalf of Market & Credit Risk teams",
+        "Risk Change: responsible for supporting both BAU and strategic change programmes for Risk Department"
+      ]
+    },
+    {
+      "company": "Stream Financial Ltd",
+      "position": "Head Of Product Development",
+      "duration": "July 2013 - April 2024 (10 years 10 months)",
+      "location": "London, United Kingdom",
+      "description": "Co-founder of Stream Financial, providing consulting services as well as technology enablers focused on industrial scale, agile, high performance data management for large financial services organisations"
+    },
+    {
+      "company": "Augmented Solutions",
+      "position": "Partner",
+      "duration": "July 2019 - February 2021 (1 year 8 months)",
+      "location": "London, United Kingdom",
+      "description": "Specialising in expert and project lead operational and all types of risk, compliance consulting, business development, capital management and program/project delivery"
+    },
+    {
+      "company": "Nordea",
+      "position": "Head of Trading & Risk Programme",
+      "duration": "March 2016 - April 2019 (3 years 2 months)",
+      "location": "Copenhagen Area, Denmark",
+      "description": "Leading the cultural transformation of Nordea's trading business to respond to the need to become the leading Nordic digital bank"
+    },
+    {
+      "company": "New Paradigm Consulting Ltd",
+      "position": "Director",
+      "duration": "June 2013 - February 2016 (2 years 9 months)",
+      "location": "London, United Kingdom",
+      "description": "Director and owner of consultancy established to help financial services clients design, build and implement infrastructure to enable better quality information, particularly across Risk, Finance & Operations"
+    },
+    {
+      "company": "Barclays",
+      "position": "Managing Director - Wholesale Risk Infrastructure Strategy",
+      "duration": "March 2012 - April 2013 (1 year 2 months)",
+      "location": "London, United Kingdom",
+      "description": "Responsible for harmonising the Risk Management Infrastructure across Barclays Wholesale Risk Management businesses"
+    },
+    {
+      "company": "Barclays Capital",
+      "position": "Managing Director - Global Head Market & Credit Risk Infrastructure",
+      "duration": "April 2008 - March 2012 (4 years)",
+      "location": "London, United Kingdom",
+      "description": "Responsible for a team of approximately 300 people covering Market & Credit Risk Projects, Market & Credit Risk Reporting, Strategic Controls and Regulatory Liaison"
+    },
+    {
+      "company": "Deutsche Bank",
+      "position": "Managing Director - COO Market Risk Management",
+      "duration": "September 2001 - April 2008 (6 years 8 months)",
+      "location": "London, United Kingdom",
+      "description": "Ensuring the efficient management of all support and management activities of Market Risk Management department"
+    },
+    {
+      "company": "Arthur Andersen",
+      "position": "Senior Manager",
+      "duration": "August 1994 - August 2001 (7 years 1 month)",
+      "location": "London, United Kingdom",
+      "description": "Various consulting engagements, special investigations, and audits including major bank reviews and regulatory investigations"
+    },
+    {
+      "company": "Arthur Andersen",
+      "position": "Audit Senior",
+      "duration": "January 1991 - August 1994 (3 years 8 months)",
+      "location": "Johannesburg, South Africa",
+      "description": "Audit assistant and senior on client engagements across various industry sectors, including healthcare, construction, consumer electronics & motor"
+    }
+  ],
+  "education": [
+    {
+      "institution": "Warwick University",
+      "degree": "MBA",
+      "duration": "September 1998 - September 2001",
+      "field_of_study": "Business Administration"
+    },
+    {
+      "institution": "Rand Afrikaans University",
+      "degree": "H Dip Tax",
+      "duration": "1992 - 1993",
+      "field_of_study": "Taxation"
+    },
+    {
+      "institution": "University of KwaZulu-Natal",
+      "degree": "Dip Acc",
+      "duration": "1990 - 1990",
+      "field_of_study": "Accounting"
+    },
+    {
+      "institution": "University of KwaZulu-Natal",
+      "degree": "B Comm",
+      "duration": "1986 - 1988", 
+      "field_of_study": "Commerce"
+    },
+    {
+      "institution": "Westridge High School",
+      "duration": "1981 - 1985"
+    }
+  ],
+  "skills": [
+    "Strategy",
+    "Fixed Income",
+    "Risk Management",
+    "Financial Services",
+    "Investment Banking",
+    "Market Risk",
+    "Credit Risk",
+    "Regulatory Compliance",
+    "Basel II/III",
+    "Project Management",
+    "Team Leadership",
+    "Data Architecture",
+    "System Implementation",
+    "Agile Delivery",
+    "Digital Transformation",
+    "Trading Infrastructure",
+    "Risk Reporting",
+    "Consulting",
+    "Python Programming",
+    "Data Management"
+  ],
+  "interests": [
+    "Artificial Intelligence",
+    "Machine Learning", 
+    "Data Science",
+    "Python Development",
+    "Risk Analytics",
+    "Financial Technology",
+    "Digital Transformation",
+    "Fintech Innovation",
+    "Regulatory Technology",
+    "Data Governance"
+  ],
+  "career_goals": {
+    "current_focus": "Risk Management Excellence",
+    "current_compensation": "£1,700/day contract rate (~£400K+ annually)",
+    "transition_goal": "AI and Machine Learning Career",
+    "timeline": "Long-term transition",
+    "salary_expectations": {
+      "target_base": "£150K-200K + bonus component",
+      "minimum_acceptable": "£120K-150K if strong bonus/equity",
+      "ai_transition_flexibility": "Willing to accept reduction for exceptional AI opportunity with growth path"
+    },
+    "target_roles": [
+      "Senior AI Risk Management Director",
+      "Head of AI - Financial Services",
+      "Director of Data Science - Risk Analytics", 
+      "AI Solutions Architect - Senior Level",
+      "VP AI Strategy - Risk Domain"
+    ]
+  },
+  "summary": "Enthusiastic individual with a passion for \"doing things right\", with 25 years of experience in Trading, Risk Management, Finance, Consulting and Auditing in investment and corporate banking focusing on front-to-back trading infrastructure. I believe that the changes in social behaviour brought about by innovation in technology will require large financial services companies to adapt their business models to continue to compete as well as co-exist with the many new fintech market entrants, while at the same time responding to multiple regulatory initiatives in a cost constrained environment.",
+  "languages": [
+    "English (Native)",
+    "Afrikaans (Native)"
+  ],
+  "publications": [
+    "Maximising the effectiveness of the Chief Data Officer"
+  ],
+  "key_achievements": [
+    "25+ years in financial services across major institutions (Barclays, Deutsche Bank, Nordea, ICBC)",
+    "Co-founder of Stream Financial (10+ years)",
+    "Led teams of 300+ people at Barclays Capital", 
+    "Managed risk infrastructure for major regulatory initiatives (Basel 2.5, Basel 3)",
+    "Led cultural transformation at Nordea to become leading Nordic digital bank",
+    "MBA from Warwick University",
+    "Chartered Accountant qualification",
+    "Extensive regulatory investigation experience (Barings, Daiwa Bank)"
+  ],
+  "profile_optimization_status": {
+    "current_headline": "Head of Risk Infrastructure",
+    "needs_update": true,
+    "ai_transition_ready": false,
+    "portfolio_linked": false,
+    "ai_readiness_score": 25,
+    "missing_ai_elements": [
+      "AI/ML terminology in headline",
+      "Specific AI projects or certifications",
+      "Modern tech stack emphasis",
+      "AI learning journey narrative"
+    ],
+    "strengths_for_ai": [
+      "Deep risk management expertise (unique in AI field)",
+      "Large team leadership experience",
+      "Digital transformation experience",
+      "Data architecture background",
+      "Regulatory compliance expertise",
+      "Strategic thinking and senior management experience"
+    ],
+    "recommendations": [
+      "Update headline to \"Head of Risk Infrastructure | AI & Risk Management Innovator | Digital Transformation Leader\"",
+      "Add section on AI learning journey and Python development",
+      "Emphasize data architecture and digital transformation experience",
+      "Link to risk-agents.com and GitHub profile",
+      "Create LinkedIn articles on AI in Risk Management",
+      "Request recommendations highlighting leadership and innovation"
+    ]
+  }
+}

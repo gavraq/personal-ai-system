@@ -1,0 +1,36 @@
+# Service Repositories (separate git repos)
+services/
+
+# Sensitive Credentials
+.env
+.env.local
+.gauth.json
+.accounts.json
+.oauth2.*.json
+credentials/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Database Files
+*.db
+*.sqlite
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary Files
+tmp/
+temp/
