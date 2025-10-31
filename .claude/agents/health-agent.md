@@ -96,23 +96,30 @@ response = requests.get(f'{base_url}/api/apple-health/metrics/sleep?days=7&limit
 sleep_data = response.json()['data']
 # Returns: total sleep, deep/core/REM breakdown, sleep start/end times, awake time
 
-# Step count
+# Step count (daily aggregation - default for cumulative metrics)
 response = requests.get(f'{base_url}/api/apple-health/metrics/steps?days=7')
 steps_data = response.json()['data']
+# Returns: daily totals with period, value, samples, summary statistics
 
-# Heart rate (high volume - use limit parameter)
+# Step count with custom aggregation
+response = requests.get(f'{base_url}/api/apple-health/metrics/steps?days=365&aggregate=yearly')
+yearly_steps = response.json()['data']
+# Aggregation levels: daily, weekly, monthly, yearly, total, none
+
+# Heart rate (high volume - individual samples, use limit parameter)
 response = requests.get(f'{base_url}/api/apple-health/metrics/heart-rate?days=1&limit=100')
 hr_data = response.json()['data']
+# Point-in-time metrics default to aggregate=none (individual samples)
 
-# Active energy (calories burned)
+# Active energy (calories burned) - daily totals
 response = requests.get(f'{base_url}/api/apple-health/metrics/active-energy?days=7')
 energy_data = response.json()['data']
 
-# Body weight
+# Body weight - individual measurements
 response = requests.get(f'{base_url}/api/apple-health/metrics/body-weight?days=30')
 weight_data = response.json()['data']
 
-# Exercise minutes
+# Exercise minutes - daily totals
 response = requests.get(f'{base_url}/api/apple-health/metrics/exercise-minutes?days=7')
 exercise_data = response.json()['data']
 
@@ -141,18 +148,31 @@ GET /api/parkrun/results/2025  # 2025 results
 GET /api/parkrun/trends        # Performance trends
 
 # ===== APPLE HEALTH METRICS (Your Health Service API) =====
-# Query pattern: /api/apple-health/metrics/:type?days=30&limit=100
+# Query pattern: /api/apple-health/metrics/:type?days=30&limit=100&aggregate=daily
 
+# Cumulative metrics (automatically aggregate to daily totals)
 GET /api/apple-health/metrics/sleep?days=7              # Sleep + stages (deep/core/REM)
 GET /api/apple-health/metrics/steps?days=7              # Daily step count
-GET /api/apple-health/metrics/heart-rate?days=1&limit=100   # Continuous HR (high volume!)
 GET /api/apple-health/metrics/active-energy?days=7      # Calories burned
 GET /api/apple-health/metrics/walking-distance?days=7   # Distance walked/run
-GET /api/apple-health/metrics/body-weight?days=30       # Body weight
 GET /api/apple-health/metrics/exercise-minutes?days=7   # Exercise ring minutes
 GET /api/apple-health/metrics/flights-climbed?days=7    # Flights of stairs
+
+# Point-in-time metrics (return individual samples by default)
+GET /api/apple-health/metrics/heart-rate?days=1&limit=100   # Continuous HR (high volume!)
+GET /api/apple-health/metrics/body-weight?days=30       # Body weight
 GET /api/apple-health/metrics/resting-heart-rate?days=30  # Daily resting HR
 GET /api/apple-health/metrics/hrv?days=30               # Heart rate variability
+
+# Custom aggregation examples
+GET /api/apple-health/metrics/steps?days=30&aggregate=weekly    # Weekly step totals
+GET /api/apple-health/metrics/steps?days=90&aggregate=monthly   # Monthly step totals
+GET /api/apple-health/metrics/steps?days=365&aggregate=yearly   # Yearly step totals
+GET /api/apple-health/metrics/steps?days=365&aggregate=total    # Single total
+GET /api/apple-health/metrics/steps?days=7&aggregate=none       # Individual samples
+
+# Aggregation levels: daily, weekly, monthly, yearly, total, none
+# Cumulative metrics default to 'daily', point-in-time metrics default to 'none'
 
 # Other endpoints
 GET /api/apple-health/summary?days=7                    # Summary (Parkrun only currently)
