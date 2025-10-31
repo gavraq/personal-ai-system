@@ -64,23 +64,25 @@ Comprehensive location intelligence system using Owntracks for continuous locati
 ## Technical Implementation
 
 ### Python Environment Setup
-**CRITICAL**: This system requires the `location-env` virtual environment.
+**Note**: This system works with system Python3 (dependencies typically already installed globally).
 
 ```bash
-# Navigate to location-integration directory
-cd /Users/gavinslater/projects/life/location-integration
+# Navigate to location integration directory
+cd /Users/gavinslater/projects/life/integrations/location
 
-# Activate virtual environment (REQUIRED before any Python operations)
-source location-env/bin/activate
+# Run analysis directly with system Python3 (works without venv)
+python3 analyze_date_enhanced.py YYYY-MM-DD
 
-# Install/update required dependencies
-pip install requests python-dateutil
+# Optional: Use virtual environment if preferred
+# source location-env/bin/activate  # If venv exists
+# pip install requests python-dateutil
 ```
 
 **Important Notes**:
-- ALWAYS activate `location-env` before running location analysis
-- Location Agent (.claude/agents/location-agent.md) uses this environment
-- Dependencies: `requests`, `python-dateutil`
+- System Python3 works fine (dependencies usually pre-installed)
+- Virtual environment (`location-env`) is optional, not required
+- Location Agent (.claude/agents/location-agent.md) uses this system
+- Required dependencies: `requests`, `python-dateutil`
 
 ### Primary Analysis Script
 
@@ -169,10 +171,9 @@ def get_locations_for_date(self, user: str, device: str, target_date: str) -> Di
 Located at: `/.claude/agents/location-agent.md`
 
 **Execution Protocol**:
-1. Navigate to `/location-integration/` directory
-2. Activate `location-env` virtual environment
-3. Run `analyze_date_enhanced.py YYYY-MM-DD`
-4. Parse output for timeline, time distribution, pattern recognition
+1. Navigate to `/Users/gavinslater/projects/life/integrations/location/` directory
+2. Run `python3 analyze_date_enhanced.py YYYY-MM-DD` (system Python3)
+3. Parse output for timeline, time distribution, pattern recognition
 
 **User/Device Credentials** (configured in agent):
 - **OWNTRACKS_USER**: `gavin-iphone`
@@ -211,10 +212,12 @@ The location-agent is used by:
 - **Local Processing**: All analysis performed locally via Python scripts
 - **No External Services**: Geocoding and analysis done without external API calls
 
-## File Structure (Clean - Oct 2025)
+## File Structure
+
+**Location**: `/Users/gavinslater/projects/life/integrations/location/`
 
 ```
-location-integration/
+integrations/location/
 ├── __init__.py                      # Python package marker
 ├── owntracks_client.py              # Core Owntracks API client
 ├── location_analyzer.py             # Location analysis logic (used by location_agent.py)
@@ -226,13 +229,13 @@ location-integration/
 ├── regular-activities.json          # Activity pattern database
 ├── requirements.txt                 # Python dependencies
 ├── CLAUDE.md                        # This file - technical documentation
-├── README.md                        # User-facing documentation (standard convention)
-├── file-audit.md                    # File cleanup audit (Oct 11, 2025)
-├── cleanup-summary.md               # Cleanup actions record
-└── location-env/                    # Python virtual environment
+└── README.md                        # User-facing documentation
 ```
 
-**Note**: `location_agent.py` is a well-structured Python class that provides programmatic access to location intelligence but is NOT currently used by the Claude Code agent system (which uses bash script execution directly). It's kept for potential future use.
+**Notes**:
+- **System Python3**: Works without virtual environment (dependencies pre-installed)
+- **location_agent.py**: Well-structured Python class for programmatic access, NOT currently used by Claude Code agent (which executes bash scripts directly). Kept for potential future use.
+- **No cleanup needed**: Documentation current and accurate as of Oct 2025
 
 ## Analytics Examples
 
@@ -315,8 +318,9 @@ Pattern: ✓ Parkrun: Bushy Park ✓ Cycling activity detected
 
 ---
 
-**Last Updated**: October 11, 2025
+**Last Updated**: October 31, 2025
 **System Status**: ✅ Fully operational with enhanced intelligence
-**Primary Script**: `analyze_date_enhanced.py`
+**Primary Script**: `analyze_date_enhanced.py` (system Python3, no venv required)
+**Directory**: `/Users/gavinslater/projects/life/integrations/location/`
 **Known Locations**: 15+ recognized locations
 **Activity Patterns**: 8 major activity types recognized
