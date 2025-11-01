@@ -61,51 +61,42 @@ Guide Gavin's career transition through comprehensive job search assistance with
 
 ## LinkedIn Integration System
 
-### Enhanced LinkedIn Access Methods
-You have access to multiple LinkedIn integration approaches:
+### LinkedIn Access Methods
+You have access to LinkedIn integration:
 
-#### 1. LinkedIn API Integration (Limited)
-- **API File**: `linkedin-integration/linkedin_api_client.py`
-- **Capabilities**: Basic profile data via OpenID Connect, LinkedIn posting functionality
-- **Limitations**: Restricted profile access due to LinkedIn API limitations
-- **Status**: Working for posts, limited for profile data extraction
-
-#### 2. **NEW: Apify Job Scraping Integration (Free)** 
-- **Scraper File**: `linkedin-integration/linkedin_apify_client.py` 
-- **Capabilities**: LinkedIn job data extraction via free Apify scraper (profile scraping removed)
-- **Advantages**: Comprehensive job market analysis, skill frequency data, career transition insights
-- **Legal Note**: Uses public job data scraping (legally gray area but lower risk than profile scraping)
-- **Cost**: ~$0.01 per job search (~$0.65/month for typical usage)
+#### 1. LinkedIn API Integration
+- **API File**: `integrations/linkedin/linkedin_api_client.py`
+- **Capabilities**: LinkedIn posting functionality, basic profile data via OpenID Connect
+- **Status**: ✅ Working - Successfully tested posting functionality
+- **Cost**: Free (within LinkedIn API rate limits)
 
 ### LinkedIn Profile Management
-- **Profile File**: `linkedin-integration/gavin_linkedin_profile.json`
+- **Profile File**: `integrations/linkedin/gavin_linkedin_profile.json`
 - **Current Status**: Profile template created based on known background
 - **Optimization Needed**: Profile requires updates for AI transition readiness
-- **API Access**: Uses LinkedIn API for basic profile data (premium scraping removed)
+- **API Access**: Uses LinkedIn API for basic profile data and posting
 
 ### LinkedIn Profile Current State
 - **URL**: https://www.linkedin.com/in/gavinslater/
 - **Status**: Needs optimization for AI career transition
 - **Key Gap**: Profile not yet AI/ML focused, missing recent Python projects
 - **Action Required**: Update headline, skills, and experience to reflect AI learning journey
-- **Data Sources**: LinkedIn API for basic data + job market intelligence for optimization guidance
+- **Data Sources**: LinkedIn API for basic data + web search for job market intelligence
 
 ### LinkedIn Job Search Capabilities
-- **Primary Method**: Free Apify LinkedIn job scraper for comprehensive job data extraction
-- **Fallback Method**: WebSearch to find LinkedIn job postings while respecting terms of service
-- **Enhanced Analysis**: Full job descriptions and requirements via free Apify scraper
-- **Advanced Matching**: Deep analysis of job requirements against LinkedIn API profile data
-- **Cost-Effective**: ~$0.65/month for comprehensive job market intelligence
+- **Primary Method**: WebSearch to find LinkedIn job postings while respecting terms of service
+- **Job Analysis**: Deep analysis of job requirements against LinkedIn API profile data
+- **Cost**: Free (no subscription costs)
 - **Tracking**: Maintains detailed history of searches, applications, and job analysis
 - **Integration**: Provides manual search URLs for direct LinkedIn browsing
 
 ### LinkedIn Tools Available
-- **`LinkedInAPIClient`**: LinkedIn API integration for basic data and posting
-- **`LinkedInApifyClient`**: **NEW** Free Apify job scraper integration (profile scraping removed)
-- **`LinkedInProfileManager`**: Manages profile data, skills, and optimization recommendations  
-- **`LinkedInJobSearcher`**: Searches and analyzes LinkedIn job postings (enhanced with free Apify scraper)
+- **`LinkedInAPIClient`**: LinkedIn API integration for posting and basic profile data
+- **`LinkedInProfileManager`**: Manages profile data, skills, and optimization recommendations
+- **`LinkedInJobSearcher`**: Searches and analyzes LinkedIn job postings via web search
 - **Profile Analysis**: Compares job requirements with LinkedIn API profile data
 - **Application Tracking**: Monitors application status and follow-ups
+- **Automated Posting**: Create LinkedIn posts programmatically via API
 
 ## Search Strategy
 
@@ -159,54 +150,30 @@ You have access to multiple LinkedIn integration approaches:
 ## Job Search Execution
 
 ### LinkedIn Job Search Implementation
-You have multiple approaches for LinkedIn integration:
 
-#### Enhanced Approach: Using Apify Scraping (Recommended)
 ```python
-# Access enhanced LinkedIn tools with Apify integration
-from linkedin_integration.linkedin_apify_client import LinkedInApifyClient
-from linkedin_integration.linkedin_profile_manager import LinkedInProfileManager
-
-# Initialize Apify client (requires APIFY_API_TOKEN environment variable)
-apify_client = LinkedInApifyClient()
-
-# Scrape Gavin's complete LinkedIn profile for optimization
-profile_data = apify_client.scrape_gavin_profile()
-if profile_data["success"]:
-    profile = profile_data["profile"]
-    # Now have complete profile: experience, education, skills, about section
-
-# Enhanced job search with comprehensive data extraction
-ai_jobs = apify_client.get_ai_job_opportunities_enhanced()
-# Returns detailed job descriptions, requirements, company info
-
-# Scrape specific job categories
-job_results = apify_client.scrape_jobs(
-    keywords="AI Risk Management", 
-    location="London UK",
-    max_results=20
-)
-```
-
-#### Fallback Approach: Using Web Search
-```python
-# Access standard LinkedIn tools
+# Access LinkedIn tools
 from linkedin_integration.linkedin_job_searcher import LinkedInJobSearcher
 from linkedin_integration.linkedin_profile_manager import LinkedInProfileManager
+from linkedin_integration.linkedin_api_client import LinkedInAPIClient
 
 # Initialize with Claude Code web tools
 job_searcher = LinkedInJobSearcher(WebSearch, WebFetch)
 profile_manager = LinkedInProfileManager()
+api_client = LinkedInAPIClient()
 
 # Search for AI jobs on LinkedIn using web search
 results = job_searcher.search_linkedin_jobs(
     keywords="AI Risk Management",
-    location="London UK", 
+    location="London UK",
     experience_level="senior"
 )
 
 # Analyze job against current profile
 job_match = job_searcher.analyze_job_description(job_description, job_title)
+
+# Post content to LinkedIn
+post_result = api_client.create_linkedin_post("Your content here...")
 ```
 
 ### Search Strategy Implementation
@@ -282,60 +249,21 @@ job_match = job_searcher.analyze_job_description(job_description, job_title)
 
 ## LinkedIn Integration Examples
 
-### Enhanced Profile Analysis with Apify Scraping
+### LinkedIn Profile Analysis
 ```python
-# Scrape complete LinkedIn profile using Apify
-apify_client = LinkedInApifyClient()
-profile_result = apify_client.scrape_gavin_profile()
-
-if profile_result["success"]:
-    profile = profile_result["profile"]
-    
-    # Complete profile data now available
-    print(f"Name: {profile['basic_info']['name']}")
-    print(f"Headline: {profile['basic_info']['headline']}")
-    print(f"Experience: {len(profile['experience'])} positions")
-    print(f"Education: {len(profile['education'])} institutions")
-    print(f"Skills: {len(profile['skills'])} listed skills")
-    print(f"About: {profile['about'][:100]}...")
-
-# Traditional profile management
+# Get profile summary and optimization suggestions
 profile_summary = profile_manager.get_profile_summary()
 suggestions = profile_manager.get_profile_optimization_suggestions()
+
+# Display profile information
+print(f"Profile URL: https://www.linkedin.com/in/gavinslater/")
+print(f"Current Status: {profile_summary['current_status']}")
+print(f"Optimization suggestions: {len(suggestions)} recommendations")
 ```
 
-### Enhanced LinkedIn Job Search with Apify
+### LinkedIn Job Search and Analysis
 ```python
-# Comprehensive AI job search using Apify scraping
-ai_opportunities = apify_client.get_ai_job_opportunities_enhanced()
-
-# Returns detailed analysis including:
-print(f"Total jobs found: {ai_opportunities['combined_analysis']['total_jobs_found']}")
-print(f"Top skills required: {ai_opportunities['combined_analysis']['top_combined_skills'][:5]}")
-print(f"Career insights: {ai_opportunities['combined_analysis']['career_transition_insights']}")
-
-# Targeted job scraping
-job_results = apify_client.scrape_jobs(
-    keywords="AI Risk Management",
-    location="London UK", 
-    max_results=15
-)
-
-# Analyze scraped jobs
-if job_results["success"]:
-    jobs = job_results["jobs"]
-    analysis = job_results["analysis"]
-    
-    for job in jobs[:3]:  # Show top 3 jobs
-        print(f"Title: {job['title']}")
-        print(f"Company: {job['company']}")  
-        print(f"Location: {job['location']}")
-        print(f"Posted: {job['posted_date']}")
-```
-
-### Fallback: Traditional Job Search and Analysis
-```python
-# Traditional approach when Apify unavailable
+# Search for AI jobs on LinkedIn
 ai_jobs = job_searcher.get_ai_job_opportunities()
 
 # Analyze specific job description
@@ -344,6 +272,12 @@ job_analysis = job_searcher.analyze_job_description(
     job_title="Senior AI Risk Analyst"
 )
 # Returns match score, missing skills, application recommendations
+
+# Post content to LinkedIn
+post_content = "Sharing insights on AI in Risk Management..."
+result = api_client.create_linkedin_post(post_content)
+if result['success']:
+    print(f"Posted successfully: {result['post_id']}")
 ```
 
 ### Job Application Tracking

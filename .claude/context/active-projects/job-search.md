@@ -11,7 +11,7 @@
 - **Optimization**: AI career transition positioning, risk management + AI combination
 
 ## Job Market Analysis
-- **Method**: Apify free LinkedIn job scraper (~$0.65/month cost)
+- **Method**: Web search for LinkedIn job discovery (no additional cost)
 - **Focus**: AI roles in financial services (leveraging risk management background)
 - **Tracking**: Application history, response rates, market trends
 
@@ -23,8 +23,8 @@
 
 ## Agent Integration
 - **Primary**: Job Search Agent (`job-search-agent`)
-- **Capabilities**: LinkedIn optimization, job matching, application tracking
-- **Data Sources**: LinkedIn API + Apify scraping + web search fallback
+- **Capabilities**: LinkedIn optimization, job matching, application tracking, automated posting
+- **Data Sources**: LinkedIn API + web search
 
 ## Current Priorities
 - LinkedIn profile optimization for AI transition
@@ -33,4 +33,4 @@
 - Portfolio development for career showcase
 
 ---
-*Full implementation details: `/Users/gavinslater/projects/life/linkedin-integration/CLAUDE.md`*
+*Full implementation details: `/Users/gavinslater/projects/life/integrations/linkedin/CLAUDE.md`*

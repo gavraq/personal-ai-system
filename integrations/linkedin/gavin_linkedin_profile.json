@@ -1,6 +1,6 @@
 {
   "profile_url": "https://www.linkedin.com/in/gavinslater/",
-  "last_updated": "2025-08-09T16:30:00.000000",
+  "last_updated": "2025-11-01T11:38:26.086219",
   "data_source": "LinkedIn Profile Export PDF",
   "basic_info": {
     "name": "Gavin Slater",
@@ -113,7 +113,7 @@
     {
       "institution": "University of KwaZulu-Natal",
       "degree": "B Comm",
-      "duration": "1986 - 1988", 
+      "duration": "1986 - 1988",
       "field_of_study": "Commerce"
     },
     {
@@ -141,11 +141,14 @@
     "Risk Reporting",
     "Consulting",
     "Python Programming",
-    "Data Management"
+    "Data Management",
+    "TensorFlow",
+    "Machine Learning",
+    "Python"
   ],
   "interests": [
     "Artificial Intelligence",
-    "Machine Learning", 
+    "Machine Learning",
     "Data Science",
     "Python Development",
     "Risk Analytics",
@@ -157,18 +160,18 @@
   ],
   "career_goals": {
     "current_focus": "Risk Management Excellence",
-    "current_compensation": "£1,700/day contract rate (~£400K+ annually)",
+    "current_compensation": "\u00a31,700/day contract rate (~\u00a3400K+ annually)",
     "transition_goal": "AI and Machine Learning Career",
     "timeline": "Long-term transition",
     "salary_expectations": {
-      "target_base": "£150K-200K + bonus component",
-      "minimum_acceptable": "£120K-150K if strong bonus/equity",
+      "target_base": "\u00a3150K-200K + bonus component",
+      "minimum_acceptable": "\u00a3120K-150K if strong bonus/equity",
       "ai_transition_flexibility": "Willing to accept reduction for exceptional AI opportunity with growth path"
     },
     "target_roles": [
       "Senior AI Risk Management Director",
       "Head of AI - Financial Services",
-      "Director of Data Science - Risk Analytics", 
+      "Director of Data Science - Risk Analytics",
       "AI Solutions Architect - Senior Level",
       "VP AI Strategy - Risk Domain"
     ]
@@ -184,7 +187,7 @@
   "key_achievements": [
     "25+ years in financial services across major institutions (Barclays, Deutsche Bank, Nordea, ICBC)",
     "Co-founder of Stream Financial (10+ years)",
-    "Led teams of 300+ people at Barclays Capital", 
+    "Led teams of 300+ people at Barclays Capital",
     "Managed risk infrastructure for major regulatory initiatives (Basel 2.5, Basel 3)",
     "Led cultural transformation at Nordea to become leading Nordic digital bank",
     "MBA from Warwick University",
