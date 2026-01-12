@@ -75,7 +75,6 @@ YOU MUST ACKNOWLEDGE UFC CONTEXT LOADING BY UNDERSTANDING GAVIN'S COMPLETE ECOSY
 - `/services/health-service/` - Health service implementation
 - `/integrations/location/` - Owntracks integration details
 - `/services/interactive-cv-website/` - Website development details
-- `/services/claude-agent-server/daily-brief-system/` - News curation implementation
 - `/integrations/observability/` - Multi-agent monitoring system
 - `/integrations/fabric/` - AI content processing patterns
 - Agent files: `/.claude/agents/[agent-name].md` - Full agent definitions
@@ -209,7 +208,7 @@ Every interaction connects to:
 ### Current Focus Areas
 - **Productivity**: Overcome procrastination, implement sustainable GTD system
 - **AI Transition**: Python advancement, portfolio building, skill development
-- **Content Creation**: Regular blogging, risk-agents.com development
+- **Content Creation**: Regular blogging, portfolio website development
 - **Health**: Sub-170 lbs weight goal, maintain Parkrun consistency
 
 ### Work-Life Structure
@@ -306,7 +305,8 @@ project-directories/              # CONDITIONALLY LOADED - Implementation detail
 ├── services/health-service/     # Health service implementation
 ├── integrations/location/       # Owntracks integration
 ├── services/interactive-cv-website/ # Website development
-└── services/claude-agent-server/daily-brief-system/ # News curation system
+├── integrations/observability/  # Multi-agent monitoring
+└── integrations/fabric/         # AI content processing patterns
 ```
 
 ---

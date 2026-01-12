@@ -1,13 +1,12 @@
 # Personal AI System - Master Docker Orchestration
-# Version: 1.0
-# Date: October 31, 2025
+# Version: 1.1
+# Date: January 12, 2026
 #
 # This compose file orchestrates all microservices in the Personal AI Infrastructure.
 # It should be deployed on the Raspberry Pi home server (pi@192.168.5.190).
 #
 # Services:
 # - health-service: Apple Health + Parkrun data (Port 3001)
-# - claude-agent-server: AI agent orchestration with UFC context (Port 3002)
 # - owntracks-api: Location tracking service (Port 8083)
 # - thames-water-service: Water usage monitoring with alerts (Port 8096)
 # - nginx: Reverse proxy with SSL termination (Ports 80, 443)
@@ -69,72 +68,6 @@ services:
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # ============================================================================
-  # Claude Agent Server
-  # ============================================================================
-  # AI agent orchestration with UFC context loading
-  # Repository: gavraq/claude-agent-server
-  # WebSocket: wss://agent.gavinslater.com/ws
-
-  claude-agent-server:
-    build: ./services/claude-agent-server
-    container_name: claude-agent-server
-    restart: unless-stopped
-    hostname: claude-agent-server
-
-    ports:
-      - "3002:3002"
-
-    volumes:
-      # UFC Context (Universal File Context) - Read-only
-      - ./.claude/context:/ufc:ro
-      - ./.claude:/claude-config:ro
-
-      # Agent logs
-      - ./services/claude-agent-server/logs:/app/logs
-
-    environment:
-      - NODE_ENV=production
-      - PORT=3002
-      - LOG_LEVEL=info
-
-      # Anthropic API
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-
-      # JWT for WebSocket authentication
-      - JWT_SECRET=${JWT_SECRET}
-
-      # Service URLs (internal Docker network)
-      - HEALTH_SERVICE_URL=http://health-service:3001
-      - LOCATION_SERVICE_URL=http://owntracks-api:8083
-
-      # UFC Context paths
-      - UFC_CONTEXT_PATH=/ufc
-      - UFC_CONFIG_PATH=/claude-config
-
-    networks:
-      personal-ai:
-        ipv4_address: 172.20.0.20
-
-    depends_on:
-      health-service:
-        condition: service_healthy
-      owntracks-api:
-        condition: service_started
-
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -253,9 +186,9 @@ services:
   # NGINX Reverse Proxy (Optional - for SSL termination)
   # ============================================================================
   # Routes external requests to internal services
-  # - agent.gavinslater.com → claude-agent-server:3002
   # - health.gavinslater.com → health-service:3001
   # - location.gavinslater.com → owntracks-api:8083
+  # - water.gavinslater.co.uk → thames-water-service:8096
 
   nginx:
     image: nginx:alpine
@@ -282,7 +215,6 @@ services:
         ipv4_address: 172.20.0.100
 
     depends_on:
-      - claude-agent-server
       - health-service
       - owntracks-api
       - thames-water-service
@@ -304,7 +236,6 @@ services:
 # ============================================================================
 #
 # ## Service Dependencies
-# - claude-agent-server depends on health-service and owntracks-api
 # - nginx depends on all backend services
 #
 # ## Network Configuration
@@ -313,14 +244,11 @@ services:
 # - Internal DNS: service names resolve to container IPs
 #
 # ## Volume Mounts
-# - UFC context is read-only for security
 # - Service logs persist to host for analysis
 # - Database files persist to host for backup
 #
 # ## Environment Variables
 # Required in .env file at project root:
-# - ANTHROPIC_API_KEY=sk-ant-xxx
-# - JWT_SECRET=your-secure-jwt-secret
 # - THAMES_WATER_EMAIL=your-thames-water-email
 # - THAMES_WATER_PASSWORD=your-thames-water-password
 # - THAMES_WATER_API_KEY=your-generated-api-key
@@ -337,12 +265,10 @@ services:
 #
 # ## Service URLs (Internal Docker Network)
 # - health-service: http://health-service:3001
-# - claude-agent-server: http://claude-agent-server:3002
 # - owntracks-api: http://owntracks-api:8083
 # - thames-water-service: http://thames-water-service:8096
 #
 # ## External Access (via NGINX)
-# - agent.gavinslater.com → claude-agent-server (WSS)
 # - health.gavinslater.com → health-service (HTTPS)
 # - location.gavinslater.com → owntracks-api (HTTPS)
 # - water.gavinslater.co.uk → thames-water-service (HTTPS)
@@ -353,6 +279,5 @@ services:
 # 3. Clone service repositories to services/ directory
 # 4. Run: docker-compose up -d
 # 5. Verify: docker-compose ps
-# 6. Test connectivity: docker exec claude-agent-server curl http://health-service:3001/health
 #
 # ============================================================================

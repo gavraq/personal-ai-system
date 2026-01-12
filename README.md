@@ -1,6 +1,6 @@
 # Personal AI System
 
-**Version**: 1.0
+**Version**: 1.2
 **Status**: Production Ready
 **Owner**: Gavin Slater
 **Repository**: https://github.com/gavraq/personal-ai-system
@@ -9,16 +9,16 @@
 
 ## Overview
 
-A comprehensive microservices-based Personal AI Infrastructure leveraging Claude AI with Universal File Context (UFC) for intelligent, goal-aligned personal assistance across productivity, health, career, and life optimization domains.
+A comprehensive microservices-based Personal AI Infrastructure leveraging Claude Code with Universal File Context (UFC) for intelligent, goal-aligned personal assistance across productivity, health, career, and life optimization domains.
 
 ### Key Features
 
 - **🧠 Universal File Context (UFC)**: Complete system awareness with GTD methodology integration
-- **🎪 15 Specialized AI Agents**: Gmail/Calendar, health, location, finances, job search, content processing, and more
+- **🎪 16 Specialized AI Agents**: Gmail/Calendar, health, location, finances, job search, content processing, and more
 - **🛠️ Plug-and-Play Architecture**: Independent microservices with standardized integrations
 - **📊 Quantified Self**: Health tracking, movement patterns, productivity analytics
-- **🌐 Multi-Access**: Mac local, Web UI, Future mobile (Telegram)
-- **🔐 Secure**: JWT authentication, OAuth2 integrations, environment-based secrets
+- **🌐 Multi-Access**: Mac local (Claude Code), Web UI (Portfolio + Documents)
+- **🔐 Secure**: NextAuth authentication, OAuth2 integrations, environment-based secrets
 
 ---
 
@@ -38,10 +38,10 @@ Personal AI System (This Repository)
 
 | Service | Purpose | Repository | Port |
 |---------|---------|------------|------|
-| **claude-agent-server** | AI agent orchestration with UFC | [gavraq/claude-agent-server](https://github.com/gavraq/claude-agent-server) | 3002 |
 | **health-service** | Apple Health + Parkrun data | [gavraq/health-service](https://github.com/gavraq/health-service) | 3001 |
-| **interactive-cv-website** | Portfolio and web UI | [gavraq/interactive-cv-website](https://github.com/gavraq/interactive-cv-website) | Vercel |
+| **interactive-cv-website** | Portfolio, documents, web UI | [gavraq/interactive-cv-website](https://github.com/gavraq/interactive-cv-website) | Vercel |
 | **location-service** | Owntracks geolocation | [owntracks/docker-recorder](https://github.com/owntracks/docker-recorder) | 8083 |
+| **thames-water-service** | Water usage monitoring | Local | 8096 |
 
 ### Integrations
 
@@ -86,7 +86,6 @@ mkdir -p services
 cd services
 
 git clone https://github.com/gavraq/health-service.git
-git clone https://github.com/gavraq/claude-agent-server.git
 git clone https://github.com/gavraq/interactive-cv-website.git
 
 cd ..
@@ -97,11 +96,8 @@ cd ..
 ```bash
 # Create .env file (not committed to git)
 cat > .env << 'EOF'
-# Anthropic API
+# Anthropic API (for Claude Code)
 ANTHROPIC_API_KEY=sk-ant-xxx
-
-# JWT Secret (for WebSocket authentication)
-JWT_SECRET=your-secure-random-string
 
 # Service URLs (Mac local development)
 HEALTH_SERVICE_URL=http://localhost:3001
@@ -122,7 +118,6 @@ git clone https://github.com/gavraq/personal-ai-system.git
 # Clone services
 cd personal-ai-system/services
 git clone https://github.com/gavraq/health-service.git
-git clone https://github.com/gavraq/claude-agent-server.git
 # Note: interactive-cv-website deployed on Vercel, not Pi
 
 # Copy .env file from Mac (secure transfer)
@@ -152,40 +147,27 @@ crontab -e
 
 ### Accessing AI Agents
 
-#### Via Web UI (Production)
-
-1. Navigate to: https://gavinslater.com
-2. Log in with credentials
-3. Chat with specialized agents:
-   - "Health agent: What was my step count yesterday?"
-   - "Location agent: Where did I go this week?"
-   - "FreeAgent agent: Create invoice for ICBC October"
-
-#### Via Mac Local (Development)
+#### Via Claude Code (Primary - Mac Local)
 
 ```bash
 # Start Claude Code
 cd ~/projects/life
-claude-code
+claude
 
-# Interact with agents in terminal
+# Interact with specialized agents via Task tool
 > What's my health summary for the past week?
+> Create an invoice for ICBC October
+> Show me where I traveled this week
 ```
 
-#### Via API (Programmatic)
+Claude Code provides full UFC context, agent delegation, and integration access.
 
-```python
-import requests
+#### Via Web UI (Portfolio & Documents)
 
-# Get JWT token
-response = requests.post('https://agent.gavinslater.com/api/auth/token',
-    json={'username': 'admin', 'password': 'your-password'})
-token = response.json()['token']
-
-# Send agent request
-ws_url = f"wss://agent.gavinslater.com/ws?token={token}"
-# Connect to WebSocket and send messages
-```
+1. Navigate to: https://gavinslater.com
+2. View portfolio and projects
+3. Log in to access Personal Space
+4. Upload and manage documents via Vercel Blob storage
 
 ### Using Integrations
 
@@ -385,7 +367,6 @@ git push origin main
 Each service has its own git repository. See service-specific README files:
 
 - [health-service/README.md](services/health-service/README.md)
-- [claude-agent-server/README.md](services/claude-agent-server/README.md)
 - [interactive-cv-website/README.md](services/interactive-cv-website/README.md)
 
 ### Integration Development
@@ -417,32 +398,21 @@ vim README.md  # User documentation
 docker-compose ps
 
 # Check specific service
-docker-compose logs -f claude-agent-server
+docker-compose logs -f health-service
 
 # Health endpoints
 curl http://localhost:3001/health  # Health service
-curl http://localhost:3002/health  # Agent server
+curl http://localhost:8083/api/0/version  # Location service
+curl http://localhost:8096/health  # Thames Water service
 ```
 
 ### Service Connectivity
 
 ```bash
-# Test internal Docker network connectivity
-docker exec claude-agent-server curl http://health-service:3001/health
-docker exec claude-agent-server curl http://owntracks-api:8083/api/0/version
+# Test internal Docker network connectivity (from any container)
+docker exec health-service curl http://owntracks-api:8083/api/0/version
 
 # Expected: JSON responses from each service
-```
-
-### UFC Context Verification
-
-```bash
-# Check UFC context is mounted
-docker exec claude-agent-server ls -la /ufc/
-
-# Check agent logs for context loading
-docker logs claude-agent-server | grep "UFC context loaded"
-# Expected: "UFC context loaded: 8 projects, 6 tools, 10 agents"
 ```
 
 ---
@@ -483,9 +453,9 @@ vercel --prod
 # Set environment variables in Vercel dashboard:
 # - ADMIN_USERNAME
 # - ADMIN_PASSWORD_HASH (base64 encoded)
-# - AGENT_WS_URL=wss://agent.gavinslater.com/ws
 # - NEXTAUTH_URL=https://gavinslater.com
 # - NEXTAUTH_SECRET
+# - BLOB_READ_WRITE_TOKEN (for document storage)
 ```
 
 ---
@@ -542,30 +512,28 @@ docker-compose build --no-cache [service-name]
 docker-compose up -d [service-name]
 ```
 
-### Agent Not Responding
+### Claude Code Not Loading Context
 
 ```bash
-# Check agent server logs
-docker logs claude-agent-server
+# Verify UFC context files exist
+ls -la ~/projects/life/.claude/context/
 
-# Verify UFC context loaded
-docker exec claude-agent-server ls -la /ufc/
+# Check Claude Code configuration
+cat ~/projects/life/CLAUDE.md
 
-# Check service connectivity
-docker exec claude-agent-server curl http://health-service:3001/health
+# Restart Claude Code
+claude
 ```
 
-### UFC Context Not Loading
+### Service Connectivity Issues
 
 ```bash
-# Verify volume mount
-docker inspect claude-agent-server | grep -A 10 Mounts
+# Check Docker network
+docker network ls
+docker network inspect personal-ai
 
-# Check context files exist
-ls -la ~/docker/personal-ai-system/.claude/context/
-
-# Restart agent server
-docker-compose restart claude-agent-server
+# Test connectivity between containers
+docker exec health-service ping owntracks-api
 ```
 
 ---
@@ -582,8 +550,8 @@ docker-compose restart claude-agent-server
 ### Authentication
 
 - **Web UI**: NextAuth with bcrypt password hashing
-- **WebSocket**: JWT token authentication
 - **APIs**: OAuth2 for third-party services (FreeAgent, LinkedIn, Gmail)
+- **Document Storage**: Vercel Blob with authentication
 
 ### Network Security
 
@@ -607,17 +575,13 @@ This is a personal project, but contributions to improve architecture or add fea
 
 ## Roadmap
 
-### Q4 2025
-- [ ] Complete migration to microservices architecture ✅ (October 2025)
-- [ ] Implement master docker-compose orchestration
-- [ ] Add comprehensive monitoring and alerting
-- [ ] Telegram bot for mobile access
-
 ### Q1 2026
+- [x] Complete migration to microservices architecture (October 2025)
+- [x] Implement master docker-compose orchestration (October 2025)
+- [x] Simplify architecture - remove agent server (January 2026)
 - [ ] Enhanced location intelligence (pattern detection)
 - [ ] FreeAgent invoice automation improvements
 - [ ] LinkedIn job search automation
-- [ ] Personal knowledge graph visualization
 
 ### Q2 2026
 - [ ] Voice interface (Whisper API)
@@ -638,14 +602,15 @@ Private repository - All rights reserved.
 
 ## Acknowledgments
 
-- **Anthropic Claude**: For AI capabilities and Claude Code SDK
+- **Anthropic Claude**: For AI capabilities and Claude Code
 - **Owntracks**: For open-source location tracking
 - **FreeAgent**: For accounting API
 - **Parkrun**: For health data access
+- **Vercel**: For web hosting and blob storage
 
 ---
 
-**Version**: 1.1
-**Last Updated**: November 22, 2025
+**Version**: 1.2
+**Last Updated**: January 12, 2026
 **Status**: Production Ready
 **Repository**: https://github.com/gavraq/personal-ai-system
