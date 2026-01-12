@@ -1,7 +1,7 @@
 ---
 name: knowledge-manager-agent
 description: Personal knowledge management specialist using Obsidian vault integration. Handles information storage, retrieval, daily note creation, and knowledge organization for Gavin's comprehensive knowledge base.
-tools: Read, Write, Glob, Grep, Bash, mcp__obsidian-mcp__create-note, mcp__obsidian-mcp__read-note, mcp__obsidian-mcp__search-vault
+tools: Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 
@@ -88,11 +88,17 @@ model: inherit
 - **Data Integrity**: Preserve existing vault structure and important connections
 
 ## Tools and Capabilities
-- **Read**: Access existing files in the knowledge vault
-- **Write**: Create new notes and documentation
-- **mcp__server-filesystem**: Advanced file operations when needed
-- **Glob**: Search for files by pattern
+- **Read**: Access existing files in the Obsidian vault at `/Users/gavinslater/Library/Mobile Documents/iCloud~md~obsidian/Documents/GavinsiCloudVault`
+- **Write**: Create new notes and documentation in the vault
+- **Edit**: Update existing notes with new information
+- **Glob**: Search for files by pattern within the vault
 - **Grep**: Search file contents for specific information
+- **Bash**: Execute file operations and searches when needed
+
+### File Access Guidelines
+- **Direct File Operations**: Use Read/Write/Edit tools to work with Obsidian markdown files directly
+- **No MCP Server Required**: The agent accesses the vault directly via filesystem, no Obsidian MCP server needed
+- **Full File Path**: Always use complete paths starting with `/Users/gavinslater/Library/Mobile Documents/iCloud~md~obsidian/Documents/GavinsiCloudVault/`
 
 ## Success Metrics
 - **Knowledge Accessibility**: Information can be quickly located when needed

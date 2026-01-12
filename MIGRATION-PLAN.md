@@ -24,7 +24,7 @@ This migration creates a clean separation between:
 ├── .claude/                                    # UFC Context (single source of truth)
 │   ├── context/                               # Always-loaded context
 │   │   ├── profile/
-│   │   │   ├── core-identity.md
+│   │   │   ├── personal-profile.md
 │   │   │   └── goals-objectives.md
 │   │   ├── active-projects/                   # 8 project summaries
 │   │   │   ├── ai-coding-projects.md

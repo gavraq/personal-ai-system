@@ -1,0 +1,48 @@
+{
+  "trip_name": "France Snowboarding March 2025 - Portes du Soleil",
+  "trip_dates": {
+    "start": "2025-03-01",
+    "end": "2025-03-04"
+  },
+  "timezone": "Europe/Paris",
+  "description": "Snowboarding trip to Portes du Soleil ski area (Avoriaz/Morzine), French Alps",
+  "locations": [
+    {
+      "id": "avoriaz-ski-resort",
+      "name": "Avoriaz Ski Resort",
+      "coordinates": {
+        "lat": 46.1900,
+        "lon": 6.7700
+      },
+      "radius": 3000,
+      "type": "ski_resort",
+      "venue_details": {
+        "resort_name": "Avoriaz",
+        "ski_area": "Portes du Soleil",
+        "base_altitude": 1800,
+        "summit_altitude": 2277,
+        "vertical_drop": 477,
+        "lifts": 34
+      },
+      "activities": ["snowboarding", "skiing"],
+      "tags": ["french-alps", "portes-du-soleil", "ski-resort"],
+      "notes": "Car-free ski resort in Portes du Soleil, part of larger interconnected ski area"
+    },
+    {
+      "id": "morzine-village",
+      "name": "Morzine Village",
+      "coordinates": {
+        "lat": 46.1800,
+        "lon": 6.7100
+      },
+      "radius": 1000,
+      "type": "village",
+      "venue_details": {
+        "elevation": 1000
+      },
+      "activities": ["accommodation", "dining"],
+      "tags": ["french-alps", "ski-village", "accommodation"],
+      "notes": "Traditional alpine village, gateway to Portes du Soleil"
+    }
+  ]
+}

@@ -64,6 +64,13 @@ Provide health analytics, performance insights, and data-driven recommendations 
 
 ## Data Access Methods
 
+**⚠️ CRITICAL: Health Service Connection Priority**
+- **PRIMARY**: `https://health.gavinslater.co.uk` (Raspberry Pi Docker service)
+- **FALLBACK 1**: `http://192.168.5.190:3001` (Direct Pi IP if HTTPS fails)
+- **FALLBACK 2**: `http://localhost:3001` (Local Mac service for development only)
+- The Raspberry Pi service has the authoritative, up-to-date data from Health Auto Export
+- Local Mac service should NOT be used for production queries
+
 **⚠️ CRITICAL: Energy Metrics Unit Conversion**
 - **ALWAYS use `metric_value_converted` for active_energy and basal_energy_burned**
 - Database stores raw kJ in `metric_value`, converted kcal in `metric_value_converted`
@@ -82,12 +89,34 @@ Provide health analytics, performance insights, and data-driven recommendations 
 import os
 import requests
 
-# Environment-aware service URL
-# For containerized environment (Pi/Docker):
+# Health Service URL Configuration
+# PRIMARY: External URL (Raspberry Pi Docker service via Nginx proxy)
 base_url = os.getenv('HEALTH_SERVICE_URL', 'https://health.gavinslater.co.uk')
 
-# For local Mac development:
-# base_url = 'http://localhost:3001'
+# FALLBACK: Local connection (only if external URL fails)
+# Use this for testing/development: 'http://localhost:3001'
+
+# Connection strategy with fallback:
+def get_health_data(endpoint, params=None):
+    """Query health service with automatic fallback to local"""
+    urls = [
+        'https://health.gavinslater.co.uk',  # PRIMARY: Pi Docker service
+        'http://192.168.5.190:3001',         # FALLBACK: Direct Pi IP
+        'http://localhost:3001'              # FALLBACK: Local Mac service
+    ]
+
+    for url in urls:
+        try:
+            response = requests.get(f'{url}{endpoint}', params=params, timeout=5)
+            if response.status_code == 200:
+                return response.json()
+        except:
+            continue
+
+    raise Exception("All health service endpoints unreachable")
+
+# Use the function for all queries:
+# data = get_health_data('/api/apple-health/metrics/sleep', {'days': 7})
 
 # ===== APPLE HEALTH METRICS (via Health Service REST API) =====
 

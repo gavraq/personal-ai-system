@@ -19,13 +19,13 @@ Provides AI agents with read/write access to the Obsidian vault containing:
 
 ## Integration Type
 
-**MCP Server**: Uses Obsidian MCP server for vault access
+**Direct File System Access**: Uses Read, Write, Edit, Glob, and Grep tools for vault access
 
 ## Key Capabilities
 
 - Create daily notes with standardized templates
-- Search vault contents (notes, tags, filenames)
-- Read and edit existing notes
+- Search vault contents (notes, tags, filenames) via Glob/Grep
+- Read and edit existing notes via Read/Edit tools
 - Manage tags and frontmatter
 - GTD task management via Obsidian Tasks plugin
 
@@ -35,4 +35,4 @@ See [knowledge-manager-agent.md](/.claude/agents/knowledge-manager-agent.md) for
 
 ## Configuration
 
-The Obsidian MCP server is configured in Claude Code's MCP settings and provides direct vault access without requiring additional wrapper code.
+The vault is accessed directly via file system tools. No MCP server required - Claude Code has direct read/write access to the vault location.

@@ -15,14 +15,17 @@ Before any custom solution, leverage existing integrations and specialized sub-a
   - **Tools**: Gmail MCP server (18 tools), Google Calendar MCP server (10+ tools)
   - **Usage**: Email processing, meeting scheduling, calendar management, communication optimization
 - **Knowledge Manager Agent** (`knowledge-manager-agent`) - Obsidian integration
-  - **Tools**: Obsidian MCP, daily note creation, cross-referencing
+  - **Tools**: Direct file system access to Obsidian vault, daily note creation, cross-referencing
   - **Usage**: Information storage, retrieval, daily journaling
+- **Content Processor Agent** (`content-processor-agent`) - Fabric AI pattern orchestration
+  - **Tools**: Fabric REST API (233+ patterns), content extraction, analysis, transformation
+  - **Usage**: YouTube→Obsidian, article summarization, writing improvement, content quality scoring
 - **Daily Journal Agent** (`daily-journal-agent`) - Daily planning and reflection orchestration
   - **Tools**: Multi-agent coordination, pattern learning, quantified self integration
   - **Usage**: Morning planning briefing, evening reflection capture, habit tracking
   - **Commands**: `/daily-journal-morning`, `/daily-journal-evening`
 - **GTD Task Manager Agent** (`gtd-task-manager-agent`) - Getting Things Done task management
-  - **Tools**: Obsidian MCP, Tasks plugin integration, daily note Actions sections
+  - **Tools**: Direct file system access to Obsidian vault, Tasks plugin integration, daily note Actions sections
   - **Usage**: Task creation, completion tracking, GTD context organization, capture processing
 
 ### Financial & Career
@@ -57,7 +60,8 @@ Before any custom solution, leverage existing integrations and specialized sub-a
 3. **LinkedIn API** → Career development (✅ Developer app)
 4. **Parkrun API** → Health/fitness tracking (✅ Node.js service)
 5. **Owntracks API** → Location intelligence (✅ Self-hosted)
-6. **Obsidian MCP** → Knowledge management (✅ Available)
+6. **Obsidian Vault** → Knowledge management (✅ Direct file access)
+7. **Fabric API** → Content processing patterns (✅ Configured, ready for deployment)
 
 ### Agent Selection Logic
 - **Communication**: Gmail & Calendar Agent → Gmail/Calendar MCP → Manual
@@ -65,9 +69,10 @@ Before any custom solution, leverage existing integrations and specialized sub-a
 - **Career & Job Search**: **ALWAYS** use Job Search Agent → LinkedIn API + Apify → Web search
 - **Health**: Health Agent → Parkrun API → Manual tracking
 - **Location**: Location Agent → Owntracks API → Manual analysis
-- **Knowledge**: Knowledge Manager Agent → Obsidian MCP → File system
-- **Tasks & GTD**: GTD Task Manager Agent → Obsidian MCP → Manual task management
-- **Content**: Daily Brief Agent → WebSearch → Manual curation
+- **Knowledge**: Knowledge Manager Agent → Direct file access → Obsidian vault
+- **Tasks & GTD**: GTD Task Manager Agent → Direct file access → Obsidian vault
+- **Content Processing**: Content Processor Agent → Fabric API (233+ patterns) → Manual processing
+- **Content Curation**: Daily Brief Agent → WebSearch → Manual curation
 - **Development**: Interactive CV Website Agent → Claude Code tools
 
 ### Job Search Priority
@@ -88,12 +93,22 @@ Before any custom solution, leverage existing integrations and specialized sub-a
 - GTD capture processing
 - Task review and planning
 
+### Content Processing Priority
+**CRITICAL**: For ANY content processing requests (YouTube, articles, writing improvement), ALWAYS use the Content Processor Agent (`content-processor-agent`) to leverage Fabric patterns. This includes:
+- YouTube video → Obsidian note conversion
+- Article summarization and wisdom extraction
+- Content quality scoring (Daily Brief)
+- CV/cover letter/blog writing improvement
+- Daily/weekly reflection processing
+- AI safety content curation (risk-agents.com)
+
 ## 🔧 Integration Contexts
 - **Gmail**: `gmail-mcp-context.md`
 - **FreeAgent**: `freeagent-api-context.md`
 - **LinkedIn**: `linkedin-api-context.md`
 - **Health APIs**: `parkrun-api-context.md`
 - **Location**: `location-integration-context.md`
+- **Fabric**: `fabric-integration-context.md`
 
 ## 📁 Detailed Implementation References
 - **Agent Definitions**: `/.claude/agents/[agent-name].md`

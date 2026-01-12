@@ -9,14 +9,14 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import logging
 try:
-    from .owntracks_client import OwntracksClient, create_owntracks_client
-    from .location_analyzer import LocationAnalyzer, create_location_analyzer
-    from .location_cache import LocationCache, create_location_cache
+    from .core.owntracks_client import OwntracksClient, create_owntracks_client
+    from .core.location_analyzer import LocationAnalyzer, create_location_analyzer
+    from .core.location_cache import LocationCache, create_location_cache
 except ImportError:
     # Fallback for direct execution
-    from owntracks_client import OwntracksClient, create_owntracks_client
-    from location_analyzer import LocationAnalyzer, create_location_analyzer
-    from location_cache import LocationCache, create_location_cache
+    from core.owntracks_client import OwntracksClient, create_owntracks_client
+    from core.location_analyzer import LocationAnalyzer, create_location_analyzer
+    from core.location_cache import LocationCache, create_location_cache
 
 
 class LocationAgent:
@@ -313,39 +313,83 @@ class LocationAgent:
             'source': locations_result['source']
         }
     
+    def analyze_date(self, target_date: str) -> Dict:
+        """
+        Analyze a full day's location data and activities
+
+        Args:
+            target_date: Date to analyze (YYYY-MM-DD format)
+
+        Returns:
+            Dictionary with daily pattern analysis including activities
+        """
+        device = self.gavin_device or self._detect_gavin_device()
+        if not device:
+            return {'error': 'Could not detect Gavin device. Please configure device name.'}
+
+        # Parse date
+        try:
+            date_obj = datetime.strptime(target_date, '%Y-%m-%d')
+        except ValueError:
+            return {'error': f'Invalid date format: {target_date}. Use YYYY-MM-DD'}
+
+        # Get location data for the date
+        # Note: API uses exclusive end date, so we need next day to include the target date
+        next_day = (date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+        locations_result = self._get_locations_with_cache(
+            self.gavin_user, device, target_date, next_day
+        )
+
+        if not locations_result['success']:
+            return {'error': f'Failed to retrieve location data: {locations_result.get("error")}'}
+
+        # Analyze daily pattern
+        daily_analysis = self.analyzer.analyze_daily_pattern(
+            locations_result['data'], date_obj
+        )
+
+        return {
+            'success': True,
+            'date': target_date,
+            'day_of_week': date_obj.strftime('%A'),
+            'analysis': daily_analysis,
+            'location_count': len(locations_result['data']),
+            'source': locations_result.get('source', 'unknown')
+        }
+
     def get_frequent_locations(self, days: int = 30, min_visits: int = 3) -> Dict:
         """
         Identify frequently visited locations
-        
+
         Args:
             days: Number of recent days to analyze
             min_visits: Minimum visits to consider frequent
-            
+
         Returns:
             Dictionary with frequent locations
         """
         device = self.gavin_device or self._detect_gavin_device()
         if not device:
             return {'error': 'Could not detect Gavin device. Please configure device name.'}
-        
+
         # Get recent location data
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        
+
         locations_result = self._get_locations_with_cache(
             self.gavin_user, device,
             start_date.strftime('%Y-%m-%d'),
             end_date.strftime('%Y-%m-%d')
         )
-        
+
         if not locations_result['success']:
             return {'error': f'Failed to retrieve location data: {locations_result.get("error")}'}
-        
+
         # Identify frequent locations
         frequent_locations = self.analyzer.identify_frequent_locations(
             locations_result['data'], min_visits
         )
-        
+
         return {
             'success': True,
             'query': f"Frequent locations in past {days} days (min {min_visits} visits)",
@@ -417,33 +461,128 @@ def create_location_agent(auth_username: str = None, auth_password: str = None,
 
 
 if __name__ == "__main__":
-    # Example usage and testing
     import sys
-    
+    import argparse
+
+    # Set up argument parser
+    parser = argparse.ArgumentParser(
+        description='Location Agent - Analyze Gavin\'s location data and activities',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  # Analyze a specific date
+  python3 location_agent.py --analyze-date 2025-10-27
+
+  # Get current location
+  python3 location_agent.py --current
+
+  # Test connection
+  python3 location_agent.py --test
+
+  # Analyze commute patterns
+  python3 location_agent.py --commute-pattern --days 30
+        '''
+    )
+
+    parser.add_argument('--analyze-date', type=str, metavar='YYYY-MM-DD',
+                        help='Analyze location data and activities for a specific date')
+    parser.add_argument('--current', action='store_true',
+                        help='Get current/last known location')
+    parser.add_argument('--test', action='store_true',
+                        help='Test Owntracks connection')
+    parser.add_argument('--commute-pattern', action='store_true',
+                        help='Analyze commute patterns')
+    parser.add_argument('--days', type=int, default=30,
+                        help='Number of days to analyze (default: 30)')
+    parser.add_argument('--cache-status', action='store_true',
+                        help='Show cache status')
+
+    args = parser.parse_args()
+
     # Create agent
     agent = create_location_agent()
-    
-    # Test connection
-    print("Testing Owntracks connection...")
-    connection = agent.test_connection()
-    print(f"Connection: {connection}")
-    
-    if not connection['success']:
-        print("Connection failed. Please check credentials and network.")
-        sys.exit(1)
-    
-    # Test basic queries (requires valid Owntracks data)
-    if agent.gavin_device:
-        print(f"\nTesting with detected device: {agent.gavin_device}")
-        
-        # Get current location
-        current = agent.get_current_location()
-        print(f"Current location: {current}")
-        
-        # Get cache status
-        cache_status = agent.get_cache_status()
-        print(f"Cache status: {json.dumps(cache_status, indent=2, default=str)}")
-        
-        print("\nLocation Agent test completed!")
-    else:
-        print("No device detected. Cannot run location queries.")
+
+    # Handle commands
+    if args.test or (not any([args.analyze_date, args.current, args.commute_pattern, args.cache_status])):
+        # Default: test connection
+        print("Testing Owntracks connection...")
+        connection = agent.test_connection()
+        print(f"Connection: {connection}")
+
+        if not connection['success']:
+            print("Connection failed. Please check credentials and network.")
+            sys.exit(1)
+
+        if agent.gavin_device:
+            print(f"\nUsing device: {agent.gavin_device}")
+            print("\nLocation Agent ready!")
+            print("Use --help for available commands")
+        else:
+            print("No device detected. Cannot run location queries.")
+
+    elif args.analyze_date:
+        print(f"Analyzing date: {args.analyze_date}")
+        result = agent.analyze_date(args.analyze_date)
+
+        if result.get('success'):
+            print(f"\n=== {result['date']} ({result['day_of_week']}) ===")
+            print(f"Location points: {result['location_count']}")
+            print(f"Data source: {result['source']}")
+            print()
+
+            analysis = result['analysis']
+            print(f"Day type: {analysis.get('day_type', 'unknown')}")
+            print(f"Primary location: {analysis.get('primary_location', 'unknown')}")
+
+            # Display timeline
+            timeline = analysis.get('timeline', [])
+            if timeline:
+                print(f"\nTimeline ({len(timeline)} segments):")
+                for segment in timeline:
+                    duration = segment.get('duration_minutes', 0)
+                    duration_str = f"{duration}m" if duration < 60 else f"{duration // 60}h {duration % 60}m"
+                    print(f"  {segment['start_time']}-{segment['end_time']}: {segment['location_name']} ({duration_str})")
+
+            # Display detected activities
+            activities = analysis.get('detected_activities', [])
+            if activities:
+                print(f"\nDetected activities: {len(activities)}")
+                for activity in activities:
+                    activity_type = activity.get('activity_type', activity.get('type', 'unknown'))
+                    print(f"\n  {activity_type.upper()}:")
+                    print(f"    Time: {activity['start_time']} - {activity['end_time']}")
+                    print(f"    Duration: {activity.get('duration_hours', 0):.2f}h")
+                    if activity.get('venue'):
+                        print(f"    Venue: {activity['venue']}")
+                    if activity.get('confidence'):
+                        conf = activity['confidence']
+                        if isinstance(conf, (int, float)):
+                            print(f"    Confidence: {conf:.2f}")
+                        else:
+                            print(f"    Confidence: {conf}")
+            else:
+                print("\nNo specific activities detected")
+        else:
+            print(f"Error: {result.get('error')}")
+            sys.exit(1)
+
+    elif args.current:
+        result = agent.get_current_location()
+        if result.get('success'):
+            print(json.dumps(result, indent=2, default=str))
+        else:
+            print(f"Error: {result.get('error')}")
+            sys.exit(1)
+
+    elif args.commute_pattern:
+        print(f"Analyzing commute patterns for past {args.days} days...")
+        result = agent.analyze_commute_pattern(args.days)
+        if result.get('success'):
+            print(json.dumps(result, indent=2, default=str))
+        else:
+            print(f"Error: {result.get('error')}")
+            sys.exit(1)
+
+    elif args.cache_status:
+        status = agent.get_cache_status()
+        print(json.dumps(status, indent=2, default=str))

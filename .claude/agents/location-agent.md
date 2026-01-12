@@ -19,16 +19,17 @@ Analyze and provide insights about Gavin's location history and movement pattern
 
 ### Essential Context Loading
 ALWAYS load these context files before processing location queries:
-- **Technical Implementation**: `/location-integration/CLAUDE.md` - API details, system architecture, virtual environment setup
-- **Activity Context**: `/location-integration/regular-activities.json` - Recurring activities and family commitments
+- **Technical Implementation**: `/integrations/location/docs/CLAUDE.md` - API details, system architecture
+- **Base Locations**: `/integrations/location/locations/base_locations.json` - Known locations (home, office, parks, etc.)
+- **Analysis Config**: `/integrations/location/config/analysis_config.json` - Activity detection settings
 - **Profile Context**: Core identity and family activity patterns
 
 ### Python Environment Requirements
-**CRITICAL**: Before executing any Python code for location analysis:
-1. Navigate to `/location-integration/` directory
-2. Activate virtual environment: `source location-env/bin/activate`
-3. Verify environment is active before running location scripts
-4. Use the activated environment for all Python operations
+**CRITICAL**: Location analysis uses Python with dependencies installed via pip3:
+1. Navigate to `/integrations/location/` directory
+2. All Python scripts run directly (no virtual environment needed)
+3. Main entry point: `location_agent.py` with CLI arguments
+4. Dependencies: requests, geopy, python-dateutil (installed globally)
 
 ## Understanding Gavin's Location Context
 
@@ -70,53 +71,59 @@ ALWAYS load these context files before processing location queries:
 
 **REQUIRED PROCESS** for retrieving location data:
 
-1. **Navigate to location-integration directory**:
+1. **Navigate to integrations/location directory**:
    ```bash
-   cd /Users/gavinslater/projects/life/location-integration
+   cd /Users/gavinslater/projects/life/integrations/location
    ```
 
-2. **Activate virtual environment** (MANDATORY):
+2. **Run location_agent.py with appropriate command**:
    ```bash
-   source location-env/bin/activate
+   python3 location_agent.py --analyze-date YYYY-MM-DD
    ```
 
-3. **Run enhanced analysis script** with date parameter:
-   ```bash
-   python3 analyze_date_enhanced.py YYYY-MM-DD
-   ```
+**Available Commands**:
+- `--analyze-date YYYY-MM-DD` - Analyze full day's activities and movements
+- `--current` - Get current/last known location
+- `--test` - Test Owntracks connection
+- `--commute-pattern --days N` - Analyze commute patterns over N days
+- `--cache-status` - Show cache status
+- `--help` - Show all available commands
 
-**Example Query**:
+**Example Queries**:
 ```bash
-cd /Users/gavinslater/projects/life/location-integration && \
-source location-env/bin/activate && \
-python3 analyze_date_enhanced.py 2025-10-10
+# Analyze a specific date
+cd /Users/gavinslater/projects/life/integrations/location && \
+python3 location_agent.py --analyze-date 2025-10-27
+
+# Get current location
+python3 location_agent.py --current
+
+# Analyze commute patterns
+python3 location_agent.py --commute-pattern --days 30
 ```
 
-**Enhanced Script Features**:
-- **Intelligent Location Recognition**: Uses `known_locations.json` to identify:
-  - Home, Office, Stations (Esher, Waterloo)
-  - Kingston Hospital
-  - Bushy Park parkrun, Esher Common parkrun
-  - Black Pond dog walking route
-  - Kimberly's School
-  - Wimbledon Greyhound Welfare (Hersham)
-  - University of Bath
-- **Activity Pattern Detection**: Uses `regular-activities.json` to recognize:
-  - Parkrun participation (with location identification)
-  - Dog walks with Roxy (Black Pond route)
-  - School runs (morning drop-offs)
-  - Hospital visits
-  - Office vs WFH days
-  - Cycling detection (velocity analysis)
-- **Travel Mode Classification**: Automatically identifies Walking, Running, Cycling, Driving based on velocity
-- **Timeline Output**: Hour-by-hour breakdown with recognized location names
-- **Time Distribution**: Duration and percentage at each location
-- **Pattern Recognition**: Automatic identification of recurring activities
+**Activity Detection Features**:
+- **Intelligent Location Recognition**: Uses `locations/base_locations.json`:
+  - Home (Esher), ICBC Office (London), Train Stations (Esher, Waterloo)
+  - Parkrun locations (Bushy, Hampton Court, Wimbledon, Richmond)
+  - Dog walking locations (Esher Common, Black Pond, Molesey Heath, Claremont)
+  - Airports (Heathrow), vacation homes (Turtle Lake, Minnesota)
+- **Activity Pattern Detection**: Via specialized analyzers in `analyzers/`:
+  - **DogWalkingAnalyzer**: Detects walks at known locations (10-90 min, walking velocity)
+  - **CommuteAnalyzer**: Identifies morning/evening commutes (train velocity, weekday patterns)
+  - **ParkrunAnalyzer**: Saturday morning 5K runs (duration 16-45 min, 2-5 m/s velocity)
+  - **GolfAnalyzer**: Golf sessions with walking/stationary patterns
+- **Velocity Classification**: Automatically identifies movement types:
+  - Stationary: <0.5 m/s (standing, sitting)
+  - Walking: 0.5-2.5 m/s (walking pace)
+  - Running: 2.5-5.0 m/s (parkrun, jogging)
+  - Driving/Train: 10-50 m/s (commute)
+  - Flying: 50-300 m/s (air travel)
 
 **IMPORTANT API NOTE**:
-- Use `get_locations_for_date(user, device, date)` API method for historical queries
-- DO NOT use `get_locations(user, device, limit)` for past dates (only has recent data)
-- The analyze_date_enhanced.py script uses the correct API method and location intelligence
+- Location Agent automatically handles date ranges (uses next day as exclusive end date)
+- Uses intelligent caching to reduce API calls
+- All analysis integrated through `LocationAnalyzer.analyze_daily_pattern()`
 
 ### Location Analysis Capabilities
 - **Historical Queries**: Retrieve location data for specific date ranges
@@ -170,23 +177,38 @@ python3 analyze_date_enhanced.py 2025-10-10
 ### Technical Architecture
 The Location Agent uses a layered approach:
 
-#### 1. Owntracks API Client (`location-integration/owntracks_client.py`)
+#### 1. Owntracks API Client (`integrations/location/core/owntracks_client.py`)
 - Direct integration with Gavin's Owntracks instance
-- Handles authentication and API requests
+- Handles authentication and API requests (HTTP Basic Auth)
 - Manages rate limiting and error recovery
-- Provides location data retrieval methods
+- Methods: `get_locations()`, `get_locations_for_date()`, `get_last_position()`
 
-#### 2. Location Analyzer (`location-integration/location_analyzer.py`)
+#### 2. Location Analyzer (`integrations/location/core/location_analyzer.py`)
 - Processes raw location data into meaningful insights
+- Coordinates specialized activity analyzers (dog walking, commute, parkrun, golf)
 - Calculates time-at-location with configurable radius
 - Identifies regular locations and travel patterns
-- Provides geocoding and reverse geocoding services
+- Method: `analyze_daily_pattern()` - main entry point for full day analysis
 
-#### 3. Local Data Caching (`location-integration/location_cache.py`)
-- Intelligent caching to reduce API calls
+#### 3. Specialized Activity Analyzers (`integrations/location/analyzers/`)
+- **Base**: `BaseActivityAnalyzer` - Common patterns and configuration
+- **DogWalkingAnalyzer**: Detects dog walks at known locations
+- **CommuteAnalyzer**: Identifies weekday commutes with train detection
+- **ParkrunAnalyzer**: Saturday morning 5K runs
+- **GolfAnalyzer**: Golf sessions with walking/stationary patterns
+- **FlightAnalyzer**: Air travel detection
+
+#### 4. Local Data Caching (`integrations/location/core/location_cache.py`)
+- Intelligent caching to reduce API calls (~/.cache/location_agent/)
 - Incremental updates for recent data
+- 24-hour TTL by default (configurable)
 - Performance optimization for common queries
-- Offline capability with cached data
+
+#### 5. Location Agent Coordinator (`integrations/location/location_agent.py`)
+- Main CLI interface with argparse
+- Coordinates all components (API client, analyzer, cache)
+- Methods: `analyze_date()`, `get_current_location()`, `analyze_commute_pattern()`
+- Automatic device detection and configuration
 
 ### Sample API Integration
 ```python

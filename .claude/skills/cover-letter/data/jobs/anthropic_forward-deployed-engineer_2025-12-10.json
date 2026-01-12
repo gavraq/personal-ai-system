@@ -1,0 +1,37 @@
+{
+  "source_url": null,
+  "parsed_at": "2025-12-10T08:54:29.526730",
+  "company": "Anthropic",
+  "role": "Forward Deployed Engineer",
+  "location": "Greater London, England, United Kingdom (hybrid, 25% in-office minimum)",
+  "job_type": "Hybrid",
+  "requirements": {
+    "technical_skills": [
+      "ai",
+      "java",
+      "python",
+      "typescript"
+    ],
+    "experience_level": [
+      "senior"
+    ],
+    "education": [
+      "bachelor's",
+      "degree",
+      "engineering"
+    ],
+    "soft_skills": [
+      "collaboration",
+      "communication"
+    ],
+    "domain_knowledge": [
+      "consulting",
+      "enterprise",
+      "financial services"
+    ],
+    "responsibilities": [],
+    "keywords": []
+  },
+  "raw_text": "Forward Deployed Engineer at Anthropic\n\nLocation: Greater London, England, United Kingdom (hybrid, 25% in-office minimum)\nSalary: \u00a3225,000\u2014\u00a3255,000 GBP annually\nSeniority Level: Mid-Senior\nEmployment Type: Full-time\n\nKey Responsibilities:\n- Building production applications using Claude models that align with customer requirements\n- Delivering technical artifacts including MCP servers, sub-agents, and agent skills for enterprise workflows\n- Providing deployment assistance for Anthropic products in corporate settings\n- Identifying repeatable deployment patterns and sharing insights with product/engineering teams\n- Staying current with LLM advancements and AI development practices\n- Cultivating customer relationships and uncovering new AI adoption opportunities\n- Traveling frequently (25-50%) to customer sites\n- Serving as an Anthropic ambassador representing the company's mission\n\nRequired Qualifications:\n- Experience: 4+ years in technical customer-facing roles (FDE positions, software engineering with consulting background, or technical founder experience)\n- LLM Expertise: Production experience with advanced prompt techniques, agent building, evaluation systems, and scaled deployment\n- Programming: Strong programming skills with proficiency in Python (and ideally in one or more additional languages like TypeScript, Java, etc) and experience shipping production applications\n- Soft Skills: Self-directed decision-making, cross-team collaboration, strong communication abilities\n- Educational Requirement: Bachelor's degree in related field or equivalent professional experience\n\nPreferred Qualifications:\n- Background in financial services, healthcare, or enterprise verticals\n- Familiarity with enterprise systems and AI deployment methodologies\n\nAdditional Information:\n- Visa sponsorship available\n- Flexible working arrangements\n",
+  "word_count": 226
+}

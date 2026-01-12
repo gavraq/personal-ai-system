@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pattern_name }} - Fabric Pattern Library{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Breadcrumb */
+    .breadcrumb {
+        margin-bottom: 2rem;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: var(--accent-ai-blue);
+    }
+
+    .breadcrumb span {
+        color: var(--text-muted);
+        margin: 0 0.5rem;
+    }
+
+    .breadcrumb .current {
+        color: var(--text-primary);
+    }
+
+    /* Pattern Header */
+    .pattern-header {
+        margin-bottom: 2rem;
+    }
+
+    .pattern-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .pattern-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Actions */
+    .pattern-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .copy-btn {
+        position: relative;
+    }
+
+    .copy-btn .tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        margin-bottom: 0.5rem;
+    }
+
+    .copy-btn .tooltip.show {
+        opacity: 1;
+    }
+
+    /* Content Section */
+    .content-section {
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-title svg {
+        width: 20px;
+        height: 20px;
+        color: var(--accent-ai-blue);
+    }
+
+    /* Pattern Content */
+    .pattern-content {
+        background: #0d1117;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .pattern-content-header {
+        background: #161b22;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #30363d;
+    }
+
+    .pattern-content-header .file-name {
+        font-family: 'SF Mono', Monaco, monospace;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+
+    .pattern-content-body {
+        padding: 1.5rem;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        color: #c9d1d9;
+        white-space: pre-wrap;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    /* Usage Section */
+    .usage-box {
+        background: var(--bg-card);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .usage-example {
+        background: #0d1117;
+        padding: 1rem;
+        border-radius: 8px;
+        font-family: 'SF Mono', Monaco, monospace;
+        font-size: 0.8125rem;
+        color: #c9d1d9;
+        overflow-x: auto;
+    }
+
+    .usage-example .comment {
+        color: #8b949e;
+    }
+
+    .usage-example .command {
+        color: #79c0ff;
+    }
+
+    /* Back Link */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.875rem;
+        margin-top: 2rem;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: var(--accent-ai-blue);
+    }
+
+    .back-link svg {
+        width: 16px;
+        height: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="breadcrumb">
+    <a href="/">Patterns</a>
+    <span>/</span>
+    <span class="current">{{ pattern_name }}</span>
+</nav>
+
+<!-- Pattern Header -->
+<div class="pattern-header">
+    <h1 class="pattern-title">{{ pattern_name }}</h1>
+    <div class="pattern-meta">
+        <span class="badge badge-ai">PATTERN</span>
+        <span style="color: var(--text-muted); font-size: 0.875rem;">
+            {{ content|length }} characters
+        </span>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="pattern-actions">
+    <button class="btn-primary copy-btn" onclick="copyContent()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        Copy Pattern
+        <span class="tooltip" id="copyTooltip">Copied!</span>
+    </button>
+    <a href="/" class="btn-secondary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to Library
+    </a>
+</div>
+
+<!-- Usage -->
+<div class="usage-box">
+    <h2 class="section-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        Usage with Claude Code
+    </h2>
+    <div class="usage-example">
+<span class="comment"># Using the /fabric slash command</span>
+<span class="command">/fabric {{ pattern_name }} [your input text here]</span>
+
+<span class="comment"># Example</span>
+<span class="command">/fabric {{ pattern_name }} &lt;paste content to process&gt;</span>
+    </div>
+</div>
+
+<!-- Pattern Content -->
+<div class="content-section">
+    <h2 class="section-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+        Pattern System Prompt
+    </h2>
+    <div class="pattern-content">
+        <div class="pattern-content-header">
+            <span class="file-name">{{ pattern_name }}/system.md</span>
+        </div>
+        <div class="pattern-content-body" id="patternContent">{{ content }}</div>
+    </div>
+</div>
+
+<!-- Back Link -->
+<a href="/" class="back-link">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    Back to all patterns
+</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyContent() {
+        const content = document.getElementById('patternContent').textContent;
+        navigator.clipboard.writeText(content).then(() => {
+            const tooltip = document.getElementById('copyTooltip');
+            tooltip.classList.add('show');
+            setTimeout(() => tooltip.classList.remove('show'), 2000);
+        });
+    }
+</script>
+{% endblock %}

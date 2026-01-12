@@ -131,7 +131,7 @@ You have access to LinkedIn integration:
 ## Skill Development Strategy
 
 ### Technical Skills to Develop
-1. **Advanced Python**: Move from intermediate to advanced
+1. **Python**: Move from beginner to intermediate
 2. **ML/AI Frameworks**: TensorFlow, PyTorch, Scikit-learn
 3. **Data Engineering**: ETL pipelines, cloud platforms (AWS, Azure)
 4. **AI Ethics**: Responsible AI, bias detection, regulatory compliance

@@ -1,0 +1,222 @@
+{
+  "version": "1.0.0",
+  "description": "Configuration for location analysis system - controls thresholds, patterns, and behavior",
+
+  "activity_analyzers": {
+    "golf": {
+      "enabled": true,
+      "velocity_range_mps": [0.5, 2.5],
+      "stationary_threshold_mps": 0.5,
+      "min_session_duration_minutes": 20,
+      "max_session_duration_minutes": 180,
+      "distance_range_meters": {
+        "9_holes": [3000, 5000],
+        "18_holes": [6000, 10000]
+      },
+      "duration_range_hours": {
+        "9_holes": [1.5, 2.5],
+        "18_holes": [3.0, 5.0]
+      },
+      "gap_tolerance_minutes": 15,
+      "confidence_weights": {
+        "known_golf_course": 40,
+        "duration_match": 25,
+        "distance_match": 20,
+        "walking_stationary_ratio": 10,
+        "minimal_fast_segments": 5
+      }
+    },
+
+    "parkrun": {
+      "enabled": true,
+      "expected_day": "Saturday",
+      "expected_time_range": ["08:00", "11:00"],
+      "velocity_range_mps": [2.0, 5.0],
+      "duration_range_minutes": [16, 45],
+      "distance_range_meters": [4500, 5500],
+      "gap_tolerance_minutes": 5,
+      "min_running_percentage": 60,
+      "confidence_weights": {
+        "known_parkrun_location": 40,
+        "saturday_morning": 20,
+        "duration_match": 15,
+        "distance_match": 15,
+        "running_velocity_percentage": 10
+      }
+    },
+
+    "dog_walking": {
+      "enabled": true,
+      "velocity_range_mps": [0.8, 2.0],
+      "min_duration_minutes": 10,
+      "max_duration_minutes": 90,
+      "expected_locations": ["esher-common", "black-pond-esher", "molesey-heath", "claremont-landscape-garden"],
+      "home_proximity_meters": 2000,
+      "stationary_tolerance_pct": 30,
+      "gap_tolerance_minutes": 5,
+      "confidence_weights": {
+        "near_home": 30,
+        "known_walking_location": 25,
+        "walking_velocity": 20,
+        "duration_reasonable": 15,
+        "stationary_stops": 10
+      }
+    },
+
+    "commute": {
+      "enabled": true,
+      "expected_locations": ["home-esher", "esher-station", "waterloo-station", "icbc-office-london"],
+      "expected_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "morning_window": ["06:00", "10:00"],
+      "evening_window": ["16:00", "20:00"],
+      "train_velocity_range_mps": [10.0, 40.0],
+      "walking_velocity_range_mps": [0.5, 2.5],
+      "typical_morning_start": "06:52",
+      "typical_evening_start": "18:00",
+      "min_commute_duration_minutes": 30,
+      "max_commute_duration_minutes": 180,
+      "gap_tolerance_minutes": 15,
+      "confidence_weights": {
+        "known_route_locations": 40,
+        "weekday_timing": 20,
+        "train_velocity_detected": 20,
+        "duration_reasonable": 10,
+        "direction_match": 10
+      }
+    },
+
+    "flight": {
+      "enabled": true,
+      "altitude_threshold_meters": 5000,
+      "velocity_threshold_mps": 200,
+      "min_flight_duration_minutes": 30,
+      "min_flight_points": 10
+    }
+  },
+
+  "velocity_classification": {
+    "stationary": {
+      "max_mps": 0.5,
+      "description": "Standing, sitting, taking golf shots"
+    },
+    "walking": {
+      "min_mps": 0.5,
+      "max_mps": 2.5,
+      "description": "Walking pace - golf, dog walking, casual stroll"
+    },
+    "running": {
+      "min_mps": 2.5,
+      "max_mps": 5.0,
+      "description": "Running pace - parkrun, jogging"
+    },
+    "cycling": {
+      "min_mps": 3.0,
+      "max_mps": 8.0,
+      "description": "Cycling speed - typical bicycle speeds"
+    },
+    "driving": {
+      "min_mps": 8.0,
+      "max_mps": 50.0,
+      "description": "Car/train speed - anything faster than cycling"
+    },
+    "flying": {
+      "min_mps": 50.0,
+      "max_mps": 300.0,
+      "description": "Flight speed"
+    }
+  },
+
+  "location_matching": {
+    "default_radius_meters": 100,
+    "category_specific_radius": {
+      "home": 100,
+      "work": 150,
+      "airport": 1000,
+      "golf_course": 500,
+      "ski_resort": 2000,
+      "park": 400,
+      "parkrun": 200,
+      "station": 100,
+      "supermarket": 100,
+      "beach": 200,
+      "marina": 300,
+      "town": 400,
+      "resort": 300
+    },
+    "min_duration_seconds": 300
+  },
+
+  "session_clustering": {
+    "default_gap_tolerance_minutes": 15,
+    "activity_specific_gaps": {
+      "golf": 15,
+      "parkrun": 5,
+      "dog_walking": 10,
+      "commute": 30
+    }
+  },
+
+  "time_periods": {
+    "morning": {"start": "06:00", "end": "12:00"},
+    "afternoon": {"start": "12:00", "end": "18:00"},
+    "evening": {"start": "18:00", "end": "22:00"},
+    "night": {"start": "22:00", "end": "06:00"}
+  },
+
+  "location_databases": {
+    "base_locations_file": "locations/base_locations.json",
+    "regular_activities_file": "regular-activities.json",
+    "auto_discovered_file": "locations/auto_discovered.json",
+    "trips_directory": "locations/trips/"
+  },
+
+  "analysis_options": {
+    "cache_enabled": true,
+    "cache_ttl_hours": 24,
+    "geocoding_enabled": true,
+    "max_geocoding_requests_per_session": 50,
+    "verbose_logging": false,
+    "debug_mode": false
+  },
+
+  "snowboarding": {
+    "enabled": true,
+    "expected_locations": [
+      "whistler-blackcomb",
+      "big-white",
+      "sun-peaks",
+      "morzine-avoriaz",
+      "kitzbuhel"
+    ],
+    "lift_velocity_range_mps": [1.5, 6.0],
+    "descent_velocity_range_mps": [5.0, 20.0],
+    "min_altitude_change_meters": 100,
+    "min_session_duration_hours": 1.0,
+    "max_session_duration_hours": 10.0,
+    "lift_detection_angle_threshold": 15,
+    "descent_detection_angle_threshold": -10,
+    "gap_tolerance_minutes": 20,
+    "min_runs_for_session": 2,
+    "confidence_weights": {
+      "known_resort_location": 35,
+      "lift_rides_detected": 25,
+      "descent_velocity_patterns": 20,
+      "altitude_changes": 15,
+      "duration_reasonable": 5
+    }
+  },
+
+  "output_formatting": {
+    "date_format": "%Y-%m-%d",
+    "time_format": "%H:%M",
+    "datetime_format": "%Y-%m-%d %H:%M:%S",
+    "distance_units": "metric",
+    "temperature_units": "celsius"
+  },
+
+  "confidence_thresholds": {
+    "high": 0.8,
+    "medium": 0.6,
+    "low": 0.4
+  }
+}

@@ -1,0 +1,24 @@
+# Environment variables (contains API keys)
+.env
+
+# Fabric configuration (may contain sensitive data)
+config/
+!config/.gitkeep
+
+# Logs
+logs/*.log
+logs/*.txt
+
+# Fabric sessions (conversation history)
+sessions/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Fabric cache
+.fabric-cache/

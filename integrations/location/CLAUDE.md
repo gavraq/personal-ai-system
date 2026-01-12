@@ -86,14 +86,15 @@ python3 analyze_date_enhanced.py YYYY-MM-DD
 
 ### Primary Analysis Script
 
-**`analyze_date_enhanced.py`** - Intelligent location analysis with pattern recognition
+**`scripts/analyze_date_enhanced.py`** - Intelligent location analysis with pattern recognition
 
 ```bash
-# Usage (with virtual environment activated)
-python3 analyze_date_enhanced.py YYYY-MM-DD
+# Usage (from location integration directory)
+cd /Users/gavinslater/projects/life/integrations/location
+python3 scripts/analyze_date_enhanced.py YYYY-MM-DD
 
 # Example
-python3 analyze_date_enhanced.py 2025-10-10
+python3 scripts/analyze_date_enhanced.py 2025-10-10
 ```
 
 **Features**:
@@ -128,11 +129,11 @@ DAY TYPE & PATTERN RECOGNITION:
 
 ### Fallback Script
 
-**`analyze_date.py`** - Basic location analysis without enhanced intelligence (simpler fallback)
+**`scripts/analyze_date.py`** - Basic location analysis without enhanced intelligence (simpler fallback)
 
 ### Owntracks API Integration
 
-**`owntracks_client.py`** - Core API client
+**`core/owntracks_client.py`** - Core API client
 
 **Critical API Method**:
 ```python
@@ -219,23 +220,38 @@ The location-agent is used by:
 ```
 integrations/location/
 ├── __init__.py                      # Python package marker
-├── owntracks_client.py              # Core Owntracks API client
-├── location_analyzer.py             # Location analysis logic (used by location_agent.py)
-├── location_cache.py                # Caching system (used by location_agent.py)
-├── location_agent.py                # Python class-based coordinator (NOT used by Claude Code agent)
-├── analyze_date_enhanced.py         # PRIMARY: Intelligent analysis script ✅
-├── analyze_date.py                  # FALLBACK: Basic analysis script
+├── location_agent.py                # Python class-based coordinator for Claude Code agent
 ├── known_locations.json             # Location database (15+ locations)
 ├── regular-activities.json          # Activity pattern database
 ├── requirements.txt                 # Python dependencies
 ├── CLAUDE.md                        # This file - technical documentation
-└── README.md                        # User-facing documentation
+├── README.md                        # User-facing documentation
+├── core/                            # Core modules
+│   ├── owntracks_client.py         # Owntracks API client
+│   ├── location_analyzer.py        # Location analysis logic
+│   └── location_cache.py           # Caching system
+├── scripts/                         # Executable analysis scripts
+│   ├── analyze_date_enhanced.py    # PRIMARY: Intelligent analysis script ✅
+│   ├── analyze_date.py             # FALLBACK: Basic analysis script
+│   └── analyze_trip.py             # Trip analysis script
+├── analyzers/                       # Activity-specific analyzers
+│   ├── base_activity_analyzer.py   # Base class for analyzers
+│   ├── parkrun_analyzer.py         # Parkrun detection
+│   ├── commute_analyzer.py         # Commute pattern analysis
+│   ├── dog_walking_analyzer.py     # Dog walk detection
+│   ├── golf_analyzer.py            # Golf activity analysis
+│   ├── snowboarding_analyzer.py    # Snowboarding trip analysis
+│   └── trip_analyzer.py            # General trip analysis
+├── archive/                         # Historical data
+├── docs/                            # Additional documentation
+├── tests/                           # Test files
+└── venv/                            # Virtual environment (optional)
 ```
 
 **Notes**:
 - **System Python3**: Works without virtual environment (dependencies pre-installed)
-- **location_agent.py**: Well-structured Python class for programmatic access, NOT currently used by Claude Code agent (which executes bash scripts directly). Kept for potential future use.
-- **No cleanup needed**: Documentation current and accurate as of Oct 2025
+- **location_agent.py**: Root-level coordinator for Claude Code agent integration
+- **Modular architecture**: Core logic in `core/`, scripts in `scripts/`, activity analyzers in `analyzers/`
 
 ## Analytics Examples
 
@@ -318,9 +334,9 @@ Pattern: ✓ Parkrun: Bushy Park ✓ Cycling activity detected
 
 ---
 
-**Last Updated**: October 31, 2025
+**Last Updated**: January 12, 2026
 **System Status**: ✅ Fully operational with enhanced intelligence
-**Primary Script**: `analyze_date_enhanced.py` (system Python3, no venv required)
+**Primary Script**: `scripts/analyze_date_enhanced.py` (system Python3, no venv required)
 **Directory**: `/Users/gavinslater/projects/life/integrations/location/`
 **Known Locations**: 15+ recognized locations
-**Activity Patterns**: 8 major activity types recognized
+**Activity Patterns**: 8+ major activity types recognized (parkrun, commute, dog walking, golf, snowboarding, trips)

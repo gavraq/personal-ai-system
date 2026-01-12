@@ -28,8 +28,8 @@ def enforce_context_hydration():
 
 Before processing ANY request, you MUST silently and immediately:
 
-1. 📂 READ ALL UFC CONTEXT FILES (527 lines total):
-   - /.claude/context/profile/core-identity.md
+1. 📂 READ ALL UFC CONTEXT FILES:
+   - /.claude/context/profile/personal-profile.md
    - /.claude/context/profile/goals-objectives.md
    - /.claude/context/active-projects/ (all 7 files)
    - /.claude/context/tools/ (all 6 files including complete agent portfolio)
@@ -59,11 +59,7 @@ Original user request follows below:
 """
 
     return {
-        "action": "add_message",
-        "message": {
-            "role": "system",
-            "content": context_enforcement
-        }
+        "additionalContext": context_enforcement
     }
 
 if __name__ == "__main__":

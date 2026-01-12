@@ -9,6 +9,7 @@
 # - health-service: Apple Health + Parkrun data (Port 3001)
 # - claude-agent-server: AI agent orchestration with UFC context (Port 3002)
 # - owntracks-api: Location tracking service (Port 8083)
+# - thames-water-service: Water usage monitoring with alerts (Port 8096)
 # - nginx: Reverse proxy with SSL termination (Ports 80, 443)
 #
 # Network:
@@ -191,6 +192,64 @@ services:
         max-file: "3"
 
   # ============================================================================
+  # Thames Water Monitoring Service
+  # ============================================================================
+  # Water usage monitoring with automated data collection and alerts
+  # Dashboard: https://water.gavinslater.co.uk
+  # API Docs: http://localhost:8096/docs
+
+  thames-water-service:
+    build: ./services/thames-water-service
+    container_name: thames-water-service
+    restart: unless-stopped
+    hostname: thames-water-service
+
+    ports:
+      - "8096:8096"
+
+    volumes:
+      # Database storage
+      - ./services/thames-water-service/data:/app/data
+
+      # Service logs
+      - ./services/thames-water-service/logs:/app/logs
+
+    environment:
+      - PORT=8096
+      - LOG_LEVEL=info
+      - DB_PATH=/app/data/thames_water.db
+      - SPIKE_THRESHOLD=800
+      - NOTIFICATION_EMAIL=gavin@slaters.uk.com
+
+      # Thames Water credentials
+      - THAMES_WATER_EMAIL=${THAMES_WATER_EMAIL}
+      - THAMES_WATER_PASSWORD=${THAMES_WATER_PASSWORD}
+      - THAMES_WATER_API_KEY=${THAMES_WATER_API_KEY}
+
+      # SMTP configuration (optional)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+
+    networks:
+      personal-ai:
+        ipv4_address: 172.20.0.40
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
   # NGINX Reverse Proxy (Optional - for SSL termination)
   # ============================================================================
   # Routes external requests to internal services
@@ -226,6 +285,7 @@ services:
       - claude-agent-server
       - health-service
       - owntracks-api
+      - thames-water-service
 
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
@@ -261,6 +321,9 @@ services:
 # Required in .env file at project root:
 # - ANTHROPIC_API_KEY=sk-ant-xxx
 # - JWT_SECRET=your-secure-jwt-secret
+# - THAMES_WATER_EMAIL=your-thames-water-email
+# - THAMES_WATER_PASSWORD=your-thames-water-password
+# - THAMES_WATER_API_KEY=your-generated-api-key
 #
 # ## Health Checks
 # - All services have health checks for monitoring
@@ -276,11 +339,13 @@ services:
 # - health-service: http://health-service:3001
 # - claude-agent-server: http://claude-agent-server:3002
 # - owntracks-api: http://owntracks-api:8083
+# - thames-water-service: http://thames-water-service:8096
 #
 # ## External Access (via NGINX)
 # - agent.gavinslater.com → claude-agent-server (WSS)
 # - health.gavinslater.com → health-service (HTTPS)
 # - location.gavinslater.com → owntracks-api (HTTPS)
+# - water.gavinslater.co.uk → thames-water-service (HTTPS)
 #
 # ## Deployment
 # 1. Copy this file to Pi: ~/docker/personal-ai-system/docker-compose.yml

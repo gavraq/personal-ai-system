@@ -14,7 +14,7 @@ A comprehensive microservices-based Personal AI Infrastructure leveraging Claude
 ### Key Features
 
 - **🧠 Universal File Context (UFC)**: Complete system awareness with GTD methodology integration
-- **🎪 10 Specialized AI Agents**: Email, health, location, finances, job search, and more
+- **🎪 15 Specialized AI Agents**: Gmail/Calendar, health, location, finances, job search, content processing, and more
 - **🛠️ Plug-and-Play Architecture**: Independent microservices with standardized integrations
 - **📊 Quantified Self**: Health tracking, movement patterns, productivity analytics
 - **🌐 Multi-Access**: Mac local, Web UI, Future mobile (Telegram)
@@ -50,10 +50,11 @@ Personal AI System (This Repository)
 | **health** | Apple Health + Parkrun access | Python REST wrapper |
 | **location** | Owntracks movement analysis | Python REST wrapper |
 | **freeagent** | Financial management (Bright Slate) | Python OAuth2 API |
-| **linkedin** | Job search + content posting | Apify actor |
+| **linkedin** | Job search + content posting | LinkedIn API + WebSearch |
 | **gmail-calendar** | Email + calendar management | MCP server |
 | **daily-brief** | Personalized news curation | Web API integration |
-| **personal-knowledge** | Obsidian vault integration | MCP server |
+| **fabric** | AI content processing patterns | REST API (233+ patterns) |
+| **observability** | Multi-agent monitoring | Custom event collector |
 
 ---
 
@@ -258,40 +259,48 @@ print(f"Invoice created: {invoice['url']}")
 .claude/
 ├── context/                    # Always-loaded context (full system awareness)
 │   ├── profile/               # Personal identity and goals
-│   │   ├── core-identity.md   # Values, background, challenges
-│   │   └── goals-objectives.md # GTD horizons, priorities
+│   │   ├── personal-profile.md # WHO I AM: Identity, career, values, challenges
+│   │   └── goals-objectives.md # WHAT I WANT: GTD horizons, Telos, priorities
 │   ├── active-projects/       # All current initiatives (8 projects)
 │   │   ├── ai-coding-projects.md
-│   │   ├── job-search.md
-│   │   ├── finances-context.md
-│   │   ├── health-context.md
+│   │   ├── career-development.md
 │   │   ├── cv-website-development.md
-│   │   ├── location-tracking-context.md
 │   │   ├── daily-journal-context.md
-│   │   └── gtd-task-management.md
+│   │   ├── finances-context.md
+│   │   ├── gtd-task-management.md
+│   │   ├── health-context.md
+│   │   └── location-tracking-context.md
 │   └── tools/                 # Complete tools + agents portfolio
 │       ├── CLAUDE.md          # Sub-agent portfolio
-│       ├── gmail-mcp-context.md
+│       ├── fabric-integration-context.md
 │       ├── freeagent-api-context.md
+│       ├── gmail-mcp-context.md
 │       ├── linkedin-api-context.md
-│       ├── parkrun-api-context.md
-│       └── location-integration-context.md
-├── agents/                     # Full agent definitions (10 agents)
+│       ├── location-integration-context.md
+│       ├── observability-context.md
+│       └── parkrun-api-context.md
+├── agents/                     # Full agent definitions (15 agents)
 │   ├── personal-consultant.md
-│   ├── email-management-agent.md
+│   ├── gmail-calendar-agent.md
 │   ├── freeagent-invoice-agent.md
 │   ├── job-search-agent.md
 │   ├── health-agent.md
 │   ├── location-agent.md
 │   ├── interactive-cv-website-agent.md
 │   ├── knowledge-manager-agent.md
+│   ├── gtd-task-manager-agent.md
+│   ├── daily-journal-agent.md
 │   ├── daily-brief-agent.md
-│   └── gtd-task-manager-agent.md
+│   ├── content-processor-agent.md
+│   ├── weekly-review-agent.md
+│   ├── project-setup-review-agent.md
+│   └── horizons-reviewer-agent.md
 └── commands/                   # Simple repeatable tasks
     ├── daily-brief.md
     ├── daily-note.md
     ├── daily-journal-morning.md
-    └── daily-journal-evening.md
+    ├── daily-journal-evening.md
+    └── youtube-transcript.md
 ```
 
 ### Context Loading Protocol
@@ -317,15 +326,20 @@ print(f"Invoice created: {invoice['url']}")
 | Agent | Purpose | Tools |
 |-------|---------|-------|
 | **personal-consultant** | Master orchestrator with goal alignment | Task, Read, Write, WebSearch, WebFetch |
-| **email-management-agent** | Gmail + calendar management | Gmail MCP, Read, Write, Task |
+| **gmail-calendar-agent** | Gmail + Google Calendar management | Gmail MCP (18 tools), Calendar MCP (10+ tools) |
 | **freeagent-invoice-agent** | Financial operations (invoicing, reporting) | FreeAgent API, Read, Write, WebFetch |
 | **job-search-agent** | LinkedIn + AI career transition | LinkedIn API, WebSearch, WebFetch |
 | **health-agent** | Parkrun + quantified self tracking | Health Service API, WebFetch |
 | **location-agent** | Movement patterns and geolocation analysis | Owntracks API, WebFetch |
 | **interactive-cv-website-agent** | Portfolio website development | Read, Write, Edit, Bash, WebFetch |
-| **knowledge-manager-agent** | Obsidian vault integration | Obsidian MCP, Read, Write |
-| **daily-brief-agent** | Personalized news curation | WebSearch, WebFetch, Read |
-| **gtd-task-manager-agent** | GTD task management | Obsidian Tasks, Read, Write, Edit |
+| **knowledge-manager-agent** | Obsidian vault integration | Read, Write, Edit, Glob, Grep |
+| **gtd-task-manager-agent** | GTD task management | Read, Write, Edit, Bash, Glob, Grep |
+| **daily-journal-agent** | Daily planning and reflection orchestration | Read, Write, Glob, Grep, WebFetch, Bash, Task |
+| **daily-brief-agent** | Personalized news curation | WebSearch, WebFetch, Read, Glob, Grep, Bash |
+| **content-processor-agent** | Fabric AI pattern processing | Bash, Read, Write, WebFetch |
+| **weekly-review-agent** | GTD weekly reviews | Read, Write, Edit, Glob, Grep, Task |
+| **project-setup-review-agent** | GTD project definition and review | Read, Write, Edit, Glob, Grep |
+| **horizons-reviewer-agent** | Goals, vision, purpose clarification | Read, Write, Edit, Glob, Grep, Task |
 
 ### Using Agents
 
@@ -631,7 +645,7 @@ Private repository - All rights reserved.
 
 ---
 
-**Version**: 1.0
-**Last Updated**: October 31, 2025
+**Version**: 1.1
+**Last Updated**: November 22, 2025
 **Status**: Production Ready
 **Repository**: https://github.com/gavraq/personal-ai-system

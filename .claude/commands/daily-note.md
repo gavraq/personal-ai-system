@@ -11,7 +11,7 @@ Create a standardized daily note in Gavin's Obsidian knowledge vault with integr
 
 ## Context Loading Protocol
 **Auto-load UFC Context**:
-- `/profile/core-identity.md` - For personalized note structure and focus areas
+- `/profile/personal-profile.md` - For personalized note structure and focus areas
 - `/profile/goals-objectives.md` - For goal progress tracking integration
 - `/active-projects/daily-journal-context.md` - For current journal system context
 

@@ -1,0 +1,150 @@
+{
+  "trip_name": "Portugal October 2025 - Pine Cliffs Resort",
+  "trip_dates": {
+    "start": "2025-10-18",
+    "end": "2025-10-25"
+  },
+  "timezone": "Europe/Lisbon",
+  "description": "Annual timeshare week at Pine Cliffs Resort, Algarve, Portugal",
+  "locations": [
+    {
+      "id": "pinecliffs-resort",
+      "name": "Pine Cliffs Resort",
+      "coordinates": {
+        "lat": 37.094,
+        "lon": -8.178
+      },
+      "radius": 300,
+      "type": "accommodation",
+      "venue_type": "timeshare_resort",
+      "activities": ["beach", "pool", "resort-amenities"],
+      "tags": ["algarve", "annual-trip", "timeshare", "accommodation"],
+      "notes": "Annual timeshare accommodation, week-long stay late October"
+    },
+    {
+      "id": "pinecliffs-golf",
+      "name": "Pine Cliffs Golf Course",
+      "coordinates": {
+        "lat": 37.093,
+        "lon": -8.175
+      },
+      "radius": 500,
+      "type": "golf_course",
+      "venue_details": {
+        "holes": 9,
+        "course_type": "clifftop",
+        "par": 33,
+        "difficulty": "moderate",
+        "features": ["clifftop", "ocean-views", "challenging-layout"]
+      },
+      "activities": ["golf"],
+      "tags": ["golf", "clifftop", "algarve", "9-hole"],
+      "notes": "9-hole clifftop golf course adjacent to Pine Cliffs Resort, rounds typically 2-2.5 hours"
+    },
+    {
+      "id": "pingo-doce-vilamoura",
+      "name": "Pingo Doce Vilamoura",
+      "coordinates": {
+        "lat": 37.1040,
+        "lon": -8.1266
+      },
+      "radius": 100,
+      "type": "supermarket",
+      "activities": ["shopping", "groceries"],
+      "tags": ["shopping", "vilamoura", "supermarket", "groceries"],
+      "notes": "Local supermarket for trip supplies"
+    },
+    {
+      "id": "armacao-pera-beach",
+      "name": "Praia de Armação de Pêra",
+      "coordinates": {
+        "lat": 37.0999,
+        "lon": -8.3551
+      },
+      "radius": 200,
+      "type": "beach",
+      "activities": ["beach", "excursion", "sightseeing"],
+      "tags": ["beach", "excursion", "algarve", "armacao-de-pera"],
+      "notes": "Beach town west of Pine Cliffs Resort, popular excursion destination"
+    },
+    {
+      "id": "faro-airport",
+      "name": "Faro Airport",
+      "coordinates": {
+        "lat": 37.014,
+        "lon": -7.966
+      },
+      "radius": 500,
+      "type": "airport",
+      "iata_code": "FAO",
+      "activities": ["travel", "airport-transfer"],
+      "tags": ["airport", "faro", "international-travel"],
+      "notes": "Faro Airport (FAO) - arrival/departure point for Algarve trips"
+    },
+    {
+      "id": "albufeira",
+      "name": "Albufeira Town",
+      "coordinates": {
+        "lat": 37.0886,
+        "lon": -8.2507
+      },
+      "radius": 400,
+      "type": "town",
+      "activities": ["dining", "shopping", "sightseeing"],
+      "tags": ["town", "algarve", "dining", "nightlife"],
+      "notes": "Nearby coastal town, popular for dining and entertainment"
+    },
+    {
+      "id": "vilamoura-marina",
+      "name": "Vilamoura Marina",
+      "coordinates": {
+        "lat": 37.0720,
+        "lon": -8.1247
+      },
+      "radius": 300,
+      "type": "marina",
+      "activities": ["dining", "shopping", "sightseeing"],
+      "tags": ["marina", "vilamoura", "dining", "shopping"],
+      "notes": "Luxury marina with restaurants and shops"
+    },
+    {
+      "id": "vale-do-lobo",
+      "name": "Vale do Lobo",
+      "coordinates": {
+        "lat": 37.0728,
+        "lon": -8.0789
+      },
+      "radius": 400,
+      "type": "resort_area",
+      "activities": ["golf", "dining", "beach"],
+      "tags": ["resort", "golf", "algarve", "luxury"],
+      "notes": "Nearby luxury resort area with golf courses and beaches"
+    },
+    {
+      "id": "quinta-do-lago",
+      "name": "Quinta do Lago",
+      "coordinates": {
+        "lat": 37.0467,
+        "lon": -8.0181
+      },
+      "radius": 500,
+      "type": "resort_area",
+      "activities": ["golf", "dining", "beach"],
+      "tags": ["resort", "golf", "algarve", "luxury"],
+      "notes": "Premium resort area east of Pine Cliffs, famous for golf"
+    },
+    {
+      "id": "pinecliffs-beach",
+      "name": "Pine Cliffs Beach",
+      "coordinates": {
+        "lat": 37.0920,
+        "lon": -8.1765
+      },
+      "radius": 200,
+      "type": "beach",
+      "activities": ["beach", "swimming", "relaxation"],
+      "tags": ["beach", "pine-cliffs", "resort-beach"],
+      "notes": "Resort private beach access via clifftop elevator"
+    }
+  ]
+}

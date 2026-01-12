@@ -1,0 +1,39 @@
+{
+  "source_url": null,
+  "parsed_at": "2025-12-10T08:39:00.424959",
+  "company": "Anthropic",
+  "role": "Senior AI Engineer",
+  "location": "London or San Francisco (Hybrid)",
+  "job_type": "Hybrid",
+  "requirements": {
+    "technical_skills": [
+      "ai",
+      "leadership",
+      "machine learning",
+      "management",
+      "python",
+      "risk management"
+    ],
+    "experience_level": [
+      "5 of experience",
+      "lead",
+      "senior"
+    ],
+    "education": [
+      "computer science"
+    ],
+    "soft_skills": [
+      "communication",
+      "leadership"
+    ],
+    "domain_knowledge": [
+      "enterprise",
+      "financial services",
+      "risk management"
+    ],
+    "responsibilities": [],
+    "keywords": []
+  },
+  "raw_text": "Senior AI Engineer at Anthropic\n\nAbout Anthropic:\nAnthropic is an AI safety company that builds reliable, interpretable, and steerable AI systems.\n\nRequirements:\n- 5+ years of experience with Python and machine learning\n- Experience with large language models (LLMs)\n- Strong leadership and communication skills\n- Background in financial services is a plus\n- Risk management experience preferred\n- BS/MS in Computer Science or related field\n\nResponsibilities:\n- Build and deploy AI systems at scale\n- Work with research teams on model development\n- Lead technical projects and mentor junior engineers\n- Drive AI adoption in enterprise environments\n\nLocation: London or San Francisco (Hybrid)\n",
+  "word_count": 104
+}

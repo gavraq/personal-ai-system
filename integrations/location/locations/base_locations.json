@@ -1,0 +1,204 @@
+{
+  "description": "Base UK locations - permanent locations for regular activities",
+  "timezone": "Europe/London",
+  "locations": [
+    {
+      "id": "home-esher",
+      "name": "Home (Esher)",
+      "coordinates": {
+        "lat": 51.3712,
+        "lon": -0.3648
+      },
+      "radius": 100,
+      "type": "residence",
+      "tags": ["home", "esher", "primary-residence"]
+    },
+    {
+      "id": "bushy-park",
+      "name": "Bushy Park",
+      "coordinates": {
+        "lat": 51.4108,
+        "lon": -0.3355
+      },
+      "radius": 200,
+      "type": "park",
+      "activities": ["parkrun", "running", "walking"],
+      "tags": ["parkrun", "bushy-park", "saturday-morning"],
+      "notes": "Regular Saturday morning parkrun venue"
+    },
+    {
+      "id": "icbc-office-london",
+      "name": "ICBC Standard Bank Office",
+      "coordinates": {
+        "lat": 51.5155,
+        "lon": -0.0922
+      },
+      "radius": 150,
+      "type": "workplace",
+      "activities": ["work", "commute"],
+      "tags": ["work", "london", "office", "gresham-street"],
+      "notes": "Office location at Gresham Street, London"
+    },
+    {
+      "id": "esher-station",
+      "name": "Esher Railway Station",
+      "coordinates": {
+        "lat": 51.3697,
+        "lon": -0.3663
+      },
+      "radius": 100,
+      "type": "transport",
+      "activities": ["commute"],
+      "tags": ["train-station", "esher", "commute"]
+    },
+    {
+      "id": "waterloo-station",
+      "name": "London Waterloo Station",
+      "coordinates": {
+        "lat": 51.5031,
+        "lon": -0.1132
+      },
+      "radius": 200,
+      "type": "transport",
+      "activities": ["commute"],
+      "tags": ["train-station", "london", "waterloo", "commute"]
+    },
+    {
+      "id": "esher-common",
+      "name": "Esher Common",
+      "coordinates": {
+        "lat": 51.3650,
+        "lon": -0.3800
+      },
+      "radius": 800,
+      "type": "outdoor",
+      "activities": ["dog-walking", "walking"],
+      "tags": ["park", "dog-walking", "esher", "outdoor"],
+      "notes": "Regular dog walking location with Roxy. Southern part of Esher Common with various trails"
+    },
+    {
+      "id": "black-pond-esher",
+      "name": "Black Pond (Esher Common)",
+      "coordinates": {
+        "lat": 51.3492,
+        "lon": -0.3735
+      },
+      "radius": 900,
+      "type": "outdoor",
+      "activities": ["dog-walking", "walking"],
+      "tags": ["park", "dog-walking", "esher", "outdoor", "black-pond", "esher-common"],
+      "notes": "Black Pond circular loop in southern Esher Common - popular dog walking route with Roxy, approximately 40-45 minute walk"
+    },
+    {
+      "id": "heathrow-airport",
+      "name": "London Heathrow Airport",
+      "coordinates": {
+        "lat": 51.4700,
+        "lon": -0.4543
+      },
+      "radius": 1000,
+      "type": "airport",
+      "iata_code": "LHR",
+      "activities": ["travel"],
+      "tags": ["airport", "heathrow", "international-travel"]
+    },
+    {
+      "id": "turtle-lake-minnesota",
+      "name": "Turtle Lake House (Minnesota)",
+      "coordinates": {
+        "lat": 47.6167,
+        "lon": -93.4167
+      },
+      "radius": 300,
+      "timezone": "America/Chicago",
+      "type": "vacation-home",
+      "activities": ["vacation", "lake-activities", "family-time"],
+      "tags": ["minnesota", "turtle-lake", "marcell", "vacation", "family"],
+      "notes": "Family house on Turtle Lake, Marcell, MN (inherited from Raquel's father)"
+    },
+    {
+      "id": "hampton-court-park",
+      "name": "Hampton Court Park",
+      "coordinates": {
+        "lat": 51.4039,
+        "lon": -0.3361
+      },
+      "radius": 200,
+      "type": "park",
+      "activities": ["parkrun", "running", "walking"],
+      "tags": ["parkrun", "hampton-court", "saturday-morning", "alternative-venue"]
+    },
+    {
+      "id": "wimbledon-common",
+      "name": "Wimbledon Common",
+      "coordinates": {
+        "lat": 51.4329,
+        "lon": -0.2344
+      },
+      "radius": 200,
+      "type": "park",
+      "activities": ["parkrun", "running", "walking"],
+      "tags": ["parkrun", "wimbledon", "saturday-morning", "alternative-venue"]
+    },
+    {
+      "id": "richmond-park",
+      "name": "Richmond Park",
+      "coordinates": {
+        "lat": 51.4479,
+        "lon": -0.2788
+      },
+      "radius": 300,
+      "type": "park",
+      "activities": ["parkrun", "running", "walking"],
+      "tags": ["parkrun", "richmond", "saturday-morning", "alternative-venue"]
+    },
+    {
+      "id": "local-supermarket-esher",
+      "name": "Local Supermarket (Esher)",
+      "coordinates": {
+        "lat": 51.3700,
+        "lon": -0.3650
+      },
+      "radius": 150,
+      "type": "supermarket",
+      "activities": ["shopping"],
+      "tags": ["shopping", "esher", "groceries"]
+    },
+    {
+      "id": "claremont-landscape-garden",
+      "name": "Claremont Landscape Garden",
+      "coordinates": {
+        "lat": 51.3556,
+        "lon": -0.3806
+      },
+      "radius": 400,
+      "type": "outdoor",
+      "activities": ["walking", "dog-walking"],
+      "tags": ["park", "national-trust", "esher", "outdoor"]
+    },
+    {
+      "id": "molesey-heath",
+      "name": "Molesey Heath",
+      "coordinates": {
+        "lat": 51.3869,
+        "lon": -0.3761
+      },
+      "radius": 400,
+      "type": "outdoor",
+      "activities": ["dog-walking", "walking"],
+      "tags": ["park", "dog-walking", "west-molesey", "outdoor"]
+    },
+    {
+      "id": "sandown-park-racecourse",
+      "name": "Sandown Park Racecourse",
+      "coordinates": {
+        "lat": 51.3639,
+        "lon": -0.3650
+      },
+      "radius": 300,
+      "type": "venue",
+      "activities": ["events"],
+      "tags": ["racecourse", "esher", "venue"]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Fabric Pattern Library Dependencies
+
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# YouTube transcript extraction
+yt-dlp>=2024.1.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Templates
+jinja2>=3.1.0
