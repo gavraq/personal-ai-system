@@ -66,9 +66,9 @@
 - [x] Create `frontend/components/deals/EditDealModal.tsx` - edit form ✅ Created with status workflow validation
 - [x] Create `frontend/components/deals/MemberManager.tsx` - manage members ✅ Created with add/remove functionality
 - [x] Add deal status badge with color coding ✅ Created StatusBadge.tsx with draft/active/closed colors
-- [ ] Test: Deal cards display on listing page
-- [ ] Test: Create deal modal works end-to-end
-- [ ] Test: Edit deal updates in real-time
+- [x] Test: Deal cards display on listing page ✅ 8 tests passing (DealCard.test.tsx)
+- [x] Test: Create deal modal works end-to-end ✅ 8 tests passing (CreateDealModal.test.tsx)
+- [x] Test: Edit deal updates in real-time ✅ 13 tests passing (EditDealModal.test.tsx)
 
 ## Phase 2 Completion
 
