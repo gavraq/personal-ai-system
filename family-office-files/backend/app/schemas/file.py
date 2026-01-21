@@ -55,3 +55,24 @@ class LinkDriveFileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UploadFileResponse(BaseModel):
+    """Response model for uploading a file to GCS"""
+    id: UUID
+    name: str
+    mime_type: Optional[str] = None
+    size_bytes: int
+    source: str = "gcs"
+    source_id: str
+
+    class Config:
+        from_attributes = True
+
+
+class FileDownloadResponse(BaseModel):
+    """Response model for file download URL"""
+    id: UUID
+    name: str
+    download_url: str
+    expires_in_minutes: int = 60

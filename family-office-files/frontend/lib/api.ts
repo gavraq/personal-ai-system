@@ -252,6 +252,22 @@ export interface LinkDriveFileResponse {
   source_id: string
 }
 
+export interface UploadFileResponse {
+  id: string
+  name: string
+  mime_type: string | null
+  size_bytes: number
+  source: 'gcs'
+  source_id: string
+}
+
+export interface FileDownloadResponse {
+  id: string
+  name: string
+  download_url: string
+  expires_in_minutes: number
+}
+
 // File API methods
 export const filesApi = {
   list: async (dealId: string, source?: FileSource): Promise<FileListResponse> => {
@@ -268,6 +284,11 @@ export const filesApi = {
 
   linkDriveFile: async (dealId: string, data: LinkDriveFileRequest): Promise<LinkDriveFileResponse> => {
     const response = await api.post<LinkDriveFileResponse>(`/api/deals/${dealId}/files/link`, data)
+    return response.data
+  },
+
+  getDownloadUrl: async (fileId: string): Promise<FileDownloadResponse> => {
+    const response = await api.get<FileDownloadResponse>(`/api/files/${fileId}/download`)
     return response.data
   },
 }

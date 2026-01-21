@@ -31,7 +31,7 @@ class File(Base):
     deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     source = Column(
-        Enum(FileSource, name="file_source", create_constraint=True),
+        Enum(FileSource, name="file_source", values_callable=lambda x: [e.value for e in x], create_constraint=False),
         nullable=False
     )
     source_id = Column(String(500))  # Drive file ID or GCS path
@@ -56,7 +56,7 @@ class FileShare(Base):
     file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), primary_key=True)
     shared_with = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     permission = Column(
-        Enum(FilePermission, name="file_permission", create_constraint=True),
+        Enum(FilePermission, name="file_permission", values_callable=lambda x: [e.value for e in x], create_constraint=False),
         default=FilePermission.VIEW,
         nullable=False
     )

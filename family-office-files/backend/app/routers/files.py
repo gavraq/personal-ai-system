@@ -1,14 +1,15 @@
 """
 Files router for document management operations
 """
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File as FastAPIFile
 from sqlalchemy.orm import Session
 
 from ..core.database import get_db
 from ..core.deps import get_current_user
+from ..core.storage import get_storage_service, StorageService
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
 from ..models.file import File, FileSource
@@ -17,9 +18,11 @@ from ..schemas.file import (
     LinkDriveFileResponse,
     FileResponse,
     FileListResponse,
+    UploadFileResponse,
+    FileDownloadResponse,
 )
 
-router = APIRouter(prefix="/api/deals", tags=["files"])
+router = APIRouter(prefix="/api", tags=["files"])
 
 
 def is_deal_member(db: Session, deal_id: UUID, user_id: UUID) -> bool:
@@ -59,7 +62,15 @@ def can_upload_files(db: Session, deal: Deal, user: User) -> bool:
     return role in [UserRole.ADMIN.value, UserRole.PARTNER.value]
 
 
-@router.post("/{deal_id}/files/link", response_model=LinkDriveFileResponse, status_code=status.HTTP_201_CREATED)
+def can_access_file(db: Session, file: File, user: User) -> bool:
+    """Check if user can access a file (member of associated deal or admin)"""
+    deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
+    if deal is None:
+        return False
+    return can_access_deal(db, deal, user)
+
+
+@router.post("/deals/{deal_id}/files/link", response_model=LinkDriveFileResponse, status_code=status.HTTP_201_CREATED)
 async def link_drive_file(
     deal_id: UUID,
     request: LinkDriveFileRequest,
@@ -143,7 +154,117 @@ async def link_drive_file(
     )
 
 
-@router.get("/{deal_id}/files", response_model=FileListResponse)
+@router.post("/deals/{deal_id}/files/upload", response_model=UploadFileResponse, status_code=status.HTTP_201_CREATED)
+async def upload_file(
+    deal_id: UUID,
+    file: UploadFile = FastAPIFile(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service)
+):
+    """
+    Upload a file directly to the platform (GCS).
+
+    - **file**: Multipart file upload (max 100MB)
+
+    Allowed file types: PDF, Word, Excel, PowerPoint, images, text, CSV, archives.
+    User must be a deal member with partner or admin role.
+    """
+    # Get the deal
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if deal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deal not found"
+        )
+
+    # Check access
+    if not can_access_deal(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this deal"
+        )
+
+    # Check permission to upload files
+    if not can_upload_files(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only partners and admins can upload files"
+        )
+
+    # Check if deal is closed
+    if deal.status == 'closed':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot upload files to a closed deal"
+        )
+
+    # Read file content
+    content = await file.read()
+    file_size = len(content)
+
+    # Validate file size
+    is_valid, error_msg = storage.validate_file_size(file_size)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=error_msg
+        )
+
+    # Validate MIME type
+    mime_type = file.content_type or "application/octet-stream"
+    is_valid, error_msg = storage.validate_mime_type(mime_type)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=error_msg
+        )
+
+    # Generate file ID and upload to GCS
+    file_id = uuid4()
+    filename = file.filename or "unnamed_file"
+
+    try:
+        gcs_path = await storage.upload_file(
+            deal_id=deal_id,
+            file_id=file_id,
+            filename=filename,
+            content=content,
+            mime_type=mime_type
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file to storage: {str(e)}"
+        )
+
+    # Create the file record
+    file_record = File(
+        id=file_id,
+        deal_id=deal_id,
+        name=filename,
+        source=FileSource.GCS,
+        source_id=gcs_path,
+        mime_type=mime_type,
+        size_bytes=file_size,
+        uploaded_by=current_user.id
+    )
+
+    db.add(file_record)
+    db.commit()
+    db.refresh(file_record)
+
+    return UploadFileResponse(
+        id=file_record.id,
+        name=file_record.name,
+        mime_type=file_record.mime_type,
+        size_bytes=file_record.size_bytes,
+        source="gcs",
+        source_id=file_record.source_id
+    )
+
+
+@router.get("/deals/{deal_id}/files", response_model=FileListResponse)
 async def list_deal_files(
     deal_id: UUID,
     source: Optional[str] = Query(None, description="Filter by source (drive or gcs)"),
@@ -185,4 +306,69 @@ async def list_deal_files(
     return FileListResponse(
         files=[FileResponse.model_validate(f) for f in files],
         total=len(files)
+    )
+
+
+@router.get("/files/{file_id}/download", response_model=FileDownloadResponse)
+async def download_file(
+    file_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service)
+):
+    """
+    Get a download URL for a file.
+
+    For GCS files, returns a signed URL valid for 60 minutes.
+    For Drive files, returns the Google Drive file URL.
+
+    User must be a member of the deal associated with the file.
+    """
+    # Get the file
+    file = db.query(File).filter(File.id == file_id).first()
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    # Check access
+    if not can_access_file(db, file, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this file"
+        )
+
+    # Generate download URL based on source
+    if file.source == FileSource.GCS:
+        if not file.source_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="File storage path not found"
+            )
+        try:
+            download_url = storage.generate_signed_url(
+                gcs_path=file.source_id,
+                expiration_minutes=60,
+                for_download=True
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate download URL: {str(e)}"
+            )
+    elif file.source == FileSource.DRIVE:
+        # For Drive files, return the Google Drive URL
+        download_url = f"https://drive.google.com/file/d/{file.source_id}/view"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unknown file source"
+        )
+
+    return FileDownloadResponse(
+        id=file.id,
+        name=file.name,
+        download_url=download_url,
+        expires_in_minutes=60 if file.source == FileSource.GCS else 0
     )

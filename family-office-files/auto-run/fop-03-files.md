@@ -50,19 +50,30 @@
 
 ## 3.3 Direct File Upload GCS (feat-15)
 
-- [ ] Create `backend/app/core/storage.py` for GCS operations
-- [ ] Implement POST `/api/deals/{deal_id}/files/upload` with multipart form
-- [ ] Validate file size (max 100MB)
-- [ ] Validate file types (configurable allowlist)
-- [ ] Upload to GCS with deal-scoped path: `deals/{deal_id}/{file_id}/{filename}`
-- [ ] Store GCS path in files table with source='gcs'
-- [ ] Implement GET `/api/files/{file_id}/download` - generate signed URL
-- [ ] Create `frontend/components/files/FileUploader.tsx` with drag-drop
-- [ ] Show upload progress indicator
-- [ ] Test: Upload valid file succeeds
-- [ ] Test: Upload oversized file returns 413
-- [ ] Test: Download returns file contents
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-15 passing`
+- [x] Create `backend/app/core/storage.py` for GCS operations ✓ StorageService class with upload/download
+- [x] Implement POST `/api/deals/{deal_id}/files/upload` with multipart form ✓ files.py router
+- [x] Validate file size (max 100MB) ✓ validate_file_size() method
+- [x] Validate file types (configurable allowlist) ✓ validate_mime_type() with ALLOWED_MIME_TYPES
+- [x] Upload to GCS with deal-scoped path: `deals/{deal_id}/{file_id}/{filename}` ✓ get_file_path() method
+- [x] Store GCS path in files table with source='gcs' ✓ FileSource.GCS enum
+- [x] Implement GET `/api/files/{file_id}/download` - generate signed URL ✓ generate_signed_url() method
+- [x] Create `frontend/components/files/FileUploader.tsx` with drag-drop ✓ with drag-drop zone
+- [x] Show upload progress indicator ✓ Progress component with XHR progress tracking
+- [x] Test: Upload valid file succeeds ✓ test_upload_valid_file_success
+- [x] Test: Upload oversized file returns 413 ✓ test_upload_oversized_file_returns_413
+- [x] Test: Download returns file contents ✓ test_download_gcs_file_returns_signed_url
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-15 passing`
+
+**Note:** Also created/updated:
+- `backend/app/core/storage.py` - GCS storage service with validation and signed URL generation
+- `backend/app/schemas/file.py` - Added UploadFileResponse and FileDownloadResponse schemas
+- `backend/app/routers/files.py` - Added upload and download endpoints
+- `frontend/components/files/FileUploader.tsx` - Drag-drop upload component with progress
+- `frontend/components/ui/progress.tsx` - Progress bar component
+- `frontend/lib/api.ts` - Added getDownloadUrl method
+- `backend/tests/test_files.py` - Added TestUploadFile and TestDownloadFile test classes
+- `backend/requirements.txt` - Added pytest-mock for testing
+- `backend/app/models/file.py` - Fixed enum serialization for PostgreSQL
 
 ## 3.4 File Listing Per Deal (feat-16)
 
