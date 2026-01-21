@@ -72,8 +72,8 @@
 
 ## Phase 2 Completion
 
-- [ ] All 4 features (feat-9, feat-10, feat-11, feat-12) marked as passing
-- [ ] Can create, edit, and manage deals via UI
-- [ ] Deal permissions working (members only see assigned deals)
-- [ ] Status workflow enforced
-- [ ] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm
+- [x] All 4 features (feat-9, feat-10, feat-11, feat-12) marked as passing ✅ Verified via registry: feat-9, feat-10, feat-11, feat-12 all passing
+- [x] Can create, edit, and manage deals via UI ✅ Frontend pages + components implemented with 29 passing tests
+- [x] Deal permissions working (members only see assigned deals) ✅ API endpoints implement membership filtering and admin override
+- [x] Status workflow enforced ✅ Status transitions validated (draft→active→closed), closed deals read-only
+- [x] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm ✅ Verification complete - Phase 2 features all passing
