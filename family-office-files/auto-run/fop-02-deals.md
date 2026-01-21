@@ -59,13 +59,13 @@
 
 ## 2.5 Deal Frontend UI
 
-- [ ] Create `frontend/app/deals/page.tsx` - deal listing
-- [ ] Create `frontend/app/deals/[id]/page.tsx` - deal detail
-- [ ] Create `frontend/components/deals/DealCard.tsx` - deal card component
-- [ ] Create `frontend/components/deals/CreateDealModal.tsx` - create form
-- [ ] Create `frontend/components/deals/EditDealModal.tsx` - edit form
-- [ ] Create `frontend/components/deals/MemberManager.tsx` - manage members
-- [ ] Add deal status badge with color coding
+- [x] Create `frontend/app/deals/page.tsx` - deal listing ✅ Created with pagination, filtering, and create modal
+- [x] Create `frontend/app/deals/[id]/page.tsx` - deal detail ✅ Created with edit/delete/member management
+- [x] Create `frontend/components/deals/DealCard.tsx` - deal card component ✅ Created with status badge
+- [x] Create `frontend/components/deals/CreateDealModal.tsx` - create form ✅ Created with dialog component
+- [x] Create `frontend/components/deals/EditDealModal.tsx` - edit form ✅ Created with status workflow validation
+- [x] Create `frontend/components/deals/MemberManager.tsx` - manage members ✅ Created with add/remove functionality
+- [x] Add deal status badge with color coding ✅ Created StatusBadge.tsx with draft/active/closed colors
 - [ ] Test: Deal cards display on listing page
 - [ ] Test: Create deal modal works end-to-end
 - [ ] Test: Edit deal updates in real-time

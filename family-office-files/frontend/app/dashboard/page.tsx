@@ -66,6 +66,9 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-600">Role</p>
             <p className="font-medium capitalize">{user.role}</p>
           </div>
+          <Button onClick={() => router.push('/deals')} className="w-full">
+            View Deals
+          </Button>
           <Button onClick={handleLogout} variant="outline" className="w-full">
             Sign Out
           </Button>

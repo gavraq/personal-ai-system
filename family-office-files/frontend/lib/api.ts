@@ -119,4 +119,101 @@ export const authApi = {
   },
 }
 
+// Deal API types
+export type DealStatus = 'draft' | 'active' | 'closed'
+
+export interface Deal {
+  id: string
+  title: string
+  description: string | null
+  status: DealStatus
+  created_by: string
+  created_at: string
+  updated_at: string | null
+}
+
+export interface DealListResponse {
+  deals: Deal[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface DealCreate {
+  title: string
+  description?: string
+}
+
+export interface DealUpdate {
+  title?: string
+  description?: string
+  status?: DealStatus
+}
+
+export interface DealMember {
+  deal_id: string
+  user_id: string
+  role_override: string | null
+  added_at: string
+  user_email: string | null
+}
+
+export interface DealMemberListResponse {
+  members: DealMember[]
+  total: number
+}
+
+export interface DealMemberCreate {
+  user_id: string
+  role_override?: string
+}
+
+// Deal API methods
+export const dealsApi = {
+  list: async (page = 1, pageSize = 20, status?: DealStatus): Promise<DealListResponse> => {
+    const params = new URLSearchParams()
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    if (status) {
+      params.append('status_filter', status)
+    }
+    const response = await api.get<DealListResponse>(`/api/deals?${params.toString()}`)
+    return response.data
+  },
+
+  get: async (dealId: string): Promise<Deal> => {
+    const response = await api.get<Deal>(`/api/deals/${dealId}`)
+    return response.data
+  },
+
+  create: async (data: DealCreate): Promise<Deal> => {
+    const response = await api.post<Deal>('/api/deals', data)
+    return response.data
+  },
+
+  update: async (dealId: string, data: DealUpdate): Promise<Deal> => {
+    const response = await api.put<Deal>(`/api/deals/${dealId}`, data)
+    return response.data
+  },
+
+  delete: async (dealId: string): Promise<void> => {
+    await api.delete(`/api/deals/${dealId}`)
+  },
+
+  // Deal member methods
+  listMembers: async (dealId: string): Promise<DealMemberListResponse> => {
+    const response = await api.get<DealMemberListResponse>(`/api/deals/${dealId}/members`)
+    return response.data
+  },
+
+  addMember: async (dealId: string, data: DealMemberCreate): Promise<DealMember> => {
+    const response = await api.post<DealMember>(`/api/deals/${dealId}/members`, data)
+    return response.data
+  },
+
+  removeMember: async (dealId: string, userId: string): Promise<void> => {
+    await api.delete(`/api/deals/${dealId}/members/${userId}`)
+  },
+}
+
 export default api
