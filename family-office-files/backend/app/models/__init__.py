@@ -8,6 +8,7 @@ from .file import File, FileShare
 from .google import GoogleConnection
 from .agent import AgentRun, AgentMessage
 from .audit import AuditLog, Activity
+from .alert import Alert, AlertMatch, AlertFrequency
 
 __all__ = [
     "Base",
@@ -21,4 +22,7 @@ __all__ = [
     "AgentMessage",
     "AuditLog",
     "Activity",
+    "Alert",
+    "AlertMatch",
+    "AlertFrequency",
 ]

@@ -1651,3 +1651,546 @@ class TestDueDiligenceAgent:
         data = response.json()
         assert data["input"]["entity_type"] == "person"
         assert "John Doe" in data["output"]["overview"]
+
+
+class TestNewsAlertsAgent:
+    """Tests for feat-26: News & Alerts Agent"""
+
+    def test_create_alert_saves_configuration(self, client, test_db):
+        """Create alert saves configuration correctly"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create alert
+        response = client.post(
+            "/api/agents/alerts",
+            json={
+                "name": "Tech News Alert",
+                "keywords": ["AI", "machine learning", "startup"],
+                "entities": ["OpenAI", "Anthropic"],
+                "frequency": "daily"
+            },
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Tech News Alert"
+        assert "AI" in data["keywords"]
+        assert "OpenAI" in data["entities"]
+        assert data["frequency"] == "daily"
+        assert data["is_active"] is True
+
+    def test_list_user_alerts(self, client, test_db):
+        """List alerts returns user's alerts"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Create alerts directly in database
+        alert1 = Alert(
+            user_id=admin.id,
+            name="First Alert",
+            keywords=["crypto", "blockchain"],
+            entities=[],
+            frequency=AlertFrequency.DAILY,
+            is_active=True
+        )
+        alert2 = Alert(
+            user_id=admin.id,
+            name="Second Alert",
+            keywords=["fintech"],
+            entities=["Stripe"],
+            frequency=AlertFrequency.WEEKLY,
+            is_active=True
+        )
+        db.add_all([alert1, alert2])
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts2@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # List alerts
+        response = client.get(
+            "/api/agents/alerts",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        alert_names = [a["name"] for a in data["alerts"]]
+        assert "First Alert" in alert_names
+        assert "Second Alert" in alert_names
+
+    def test_delete_alert_removes_configuration(self, client, test_db):
+        """Delete alert removes configuration"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Create alert directly in database
+        alert = Alert(
+            user_id=admin.id,
+            name="To Be Deleted",
+            keywords=["test"],
+            entities=[],
+            frequency=AlertFrequency.DAILY,
+            is_active=True
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+        alert_id = alert.id
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts3@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Delete alert
+        response = client.delete(
+            f"/api/agents/alerts/{alert_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 204
+
+        # Verify alert is deleted
+        deleted_alert = db.query(Alert).filter(Alert.id == alert_id).first()
+        assert deleted_alert is None
+
+    def test_alert_triggers_on_keyword_match(self, client, test_db):
+        """Alert match is stored when keyword matches"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertMatch, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Create alert
+        alert = Alert(
+            user_id=admin.id,
+            name="Tech Monitoring",
+            keywords=["AI", "startup"],
+            entities=["OpenAI"],
+            frequency=AlertFrequency.IMMEDIATE,
+            is_active=True
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+
+        # Create alert match directly (simulating background job result)
+        match = AlertMatch(
+            alert_id=alert.id,
+            headline="OpenAI Announces New AI Model",
+            source="TechCrunch",
+            url="https://techcrunch.com/openai-new-model",
+            snippet="OpenAI has released a new AI model that outperforms previous versions.",
+            sentiment="positive",
+            keywords_matched=["AI"],
+            notified=False,
+            matched_at=datetime.utcnow()
+        )
+        db.add(match)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts4@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Get alert matches
+        response = client.get(
+            f"/api/agents/alerts/{alert.id}/matches",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["matches"][0]["headline"] == "OpenAI Announces New AI Model"
+        assert "AI" in data["matches"][0]["keywords_matched"]
+
+    def test_update_alert_configuration(self, client, test_db):
+        """Update alert updates configuration correctly"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Create alert
+        alert = Alert(
+            user_id=admin.id,
+            name="Original Name",
+            keywords=["original"],
+            entities=[],
+            frequency=AlertFrequency.DAILY,
+            is_active=True
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts5@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Update alert
+        response = client.put(
+            f"/api/agents/alerts/{alert.id}",
+            json={
+                "name": "Updated Name",
+                "keywords": ["updated", "new"],
+                "frequency": "weekly"
+            },
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Updated Name"
+        assert "updated" in data["keywords"]
+        assert "new" in data["keywords"]
+        assert data["frequency"] == "weekly"
+
+    def test_start_news_agent_returns_run_id(self, client, test_db):
+        """POST /api/agents/news_alerts/run returns a run_id for async execution"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts6@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts6@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "News Agent Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Start news agent run
+        response = client.post(
+            f"/api/agents/news_alerts/run?deal_id={deal_id}",
+            json={"query": "Monitor tech industry news"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202  # Accepted
+        data = response.json()
+        assert "run_id" in data
+        assert data["status"] == "pending"
+        assert "news_alerts" in data["message"]
+
+    def test_news_agent_returns_structured_output(self, client, test_db):
+        """News agent returns structured output with news items"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts7@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts7@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "News Output Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create completed agent run with news output
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.NEWS_ALERTS,
+            status=AgentStatus.COMPLETED,
+            input={"query": "AI startup funding", "keywords": ["AI", "funding"]},
+            output={
+                "summary": "Found 3 relevant news articles about AI startup funding.",
+                "news_items": [
+                    {
+                        "headline": "AI Startup Raises $50M Series B",
+                        "date": "2024-01-15",
+                        "source": "TechCrunch",
+                        "url": "https://techcrunch.com/ai-funding",
+                        "snippet": "An AI startup has raised $50M in Series B funding.",
+                        "relevance_score": 0.95,
+                        "sentiment": "positive",
+                        "keywords_matched": ["AI", "funding"],
+                        "entities_mentioned": ["OpenAI"]
+                    },
+                    {
+                        "headline": "AI Investment Trends 2024",
+                        "date": "2024-01-10",
+                        "source": "Bloomberg",
+                        "url": "https://bloomberg.com/ai-trends",
+                        "snippet": "AI investments continue to grow in 2024.",
+                        "relevance_score": 0.88,
+                        "sentiment": "positive",
+                        "keywords_matched": ["AI"],
+                        "entities_mentioned": []
+                    }
+                ],
+                "total_matches": 2,
+                "keywords_matched": ["AI", "funding"],
+                "sources": ["TechCrunch", "Bloomberg"]
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_type"] == "news_alerts"
+        assert "news_items" in data["output"]
+        assert len(data["output"]["news_items"]) == 2
+        assert data["output"]["total_matches"] == 2
+        assert "AI" in data["output"]["keywords_matched"]
+
+    def test_alert_requires_keywords_or_entities(self, client, test_db):
+        """Create alert fails without keywords or entities"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts8@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts8@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Try to create alert without keywords or entities
+        response = client.post(
+            "/api/agents/alerts",
+            json={
+                "name": "Empty Alert",
+                "keywords": [],
+                "entities": [],
+                "frequency": "daily"
+            },
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 400
+        assert "keywords" in response.json()["detail"].lower() or "entities" in response.json()["detail"].lower()
+
+    def test_alert_access_control(self, client, test_db):
+        """Users cannot access other users' alerts"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create two users
+        admin = User(
+            email="admin_newsalerts9@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        viewer = User(
+            email="viewer_newsalerts9@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add_all([admin, viewer])
+        db.commit()
+        db.refresh(admin)
+        db.refresh(viewer)
+
+        # Create alert for admin
+        alert = Alert(
+            user_id=admin.id,
+            name="Admin's Alert",
+            keywords=["private"],
+            entities=[],
+            frequency=AlertFrequency.DAILY,
+            is_active=True
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_newsalerts9@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Try to access admin's alert
+        response = client.get(
+            f"/api/agents/alerts/{alert.id}",
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+
+        assert response.status_code == 403
+
+    def test_trigger_alert_check(self, client, test_db):
+        """Manually trigger alert check returns accepted"""
+        from app.core.database import get_db
+        from app.models.alert import Alert, AlertFrequency
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_newsalerts10@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Create alert
+        alert = Alert(
+            user_id=admin.id,
+            name="Check Me",
+            keywords=["test"],
+            entities=[],
+            frequency=AlertFrequency.DAILY,
+            is_active=True
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_newsalerts10@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Trigger alert check
+        response = client.post(
+            f"/api/agents/alerts/{alert.id}/check",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202
+        data = response.json()
+        assert data["message"] == "Alert check started"
+        assert data["alert_id"] == str(alert.id)

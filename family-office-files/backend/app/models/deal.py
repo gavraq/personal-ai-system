@@ -44,6 +44,7 @@ class Deal(Base):
     files = relationship("File", back_populates="deal", cascade="all, delete-orphan")
     agent_runs = relationship("AgentRun", back_populates="deal", cascade="all, delete-orphan")
     activities = relationship("Activity", back_populates="deal", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="deal", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Deal {self.title}>"

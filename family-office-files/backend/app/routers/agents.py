@@ -13,6 +13,7 @@ from ..core.deps import get_current_user
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
 from ..models.agent import AgentRun, AgentMessage, AgentType, AgentStatus
+from ..models.alert import Alert, AlertMatch, AlertFrequency
 from ..schemas.agent import (
     AgentRunResponse,
     AgentRunListResponse,
@@ -22,6 +23,12 @@ from ..schemas.agent import (
     AgentRunStartResponse,
     AgentMessageResponse,
     AgentMessagesResponse,
+    AlertCreateRequest,
+    AlertUpdateRequest,
+    AlertResponse,
+    AlertListResponse,
+    AlertMatchResponse,
+    AlertMatchListResponse,
 )
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
@@ -345,6 +352,7 @@ async def run_agent_in_background(
     from ..agents.market_research import MarketResearchAgent
     from ..agents.document_analysis import DocumentAnalysisAgent
     from ..agents.due_diligence import DueDiligenceAgent
+    from ..agents.news_alerts import NewsAlertsAgent
 
     db = SessionLocal()
     try:
@@ -364,6 +372,9 @@ async def run_agent_in_background(
             output = await agent.execute(input_data)
         elif agent_type == AgentType.DUE_DILIGENCE:
             agent = DueDiligenceAgent(db, user_id, deal_id)
+            output = await agent.execute(input_data)
+        elif agent_type == AgentType.NEWS_ALERTS:
+            agent = NewsAlertsAgent(db, user_id, deal_id)
             output = await agent.execute(input_data)
         else:
             # Fallback mock for agents not yet implemented
@@ -526,3 +537,354 @@ async def get_agent_run_messages(
         ],
         total=len(messages)
     )
+
+
+# Alert endpoints for News & Alerts agent (feat-26)
+
+def alert_to_response(alert: Alert) -> AlertResponse:
+    """Convert Alert model to AlertResponse"""
+    return AlertResponse(
+        id=alert.id,
+        user_id=alert.user_id,
+        deal_id=alert.deal_id,
+        name=alert.name,
+        keywords=alert.keywords or [],
+        entities=alert.entities or [],
+        frequency=alert.frequency,
+        is_active=alert.is_active,
+        created_at=alert.created_at,
+        updated_at=alert.updated_at,
+        last_checked_at=alert.last_checked_at
+    )
+
+
+@router.post("/alerts", response_model=AlertResponse, status_code=status.HTTP_201_CREATED)
+async def create_alert(
+    request: AlertCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new alert for news monitoring.
+
+    - **name**: Name/description of the alert
+    - **keywords**: List of keywords to monitor
+    - **entities**: List of entities (companies, people) to track
+    - **frequency**: How often to check (daily, weekly, immediate)
+    - **deal_id**: Optional deal to associate with
+    """
+    # Validate at least one of keywords or entities is provided
+    if not request.keywords and not request.entities:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of keywords or entities must be provided"
+        )
+
+    # If deal_id is provided, check access
+    if request.deal_id:
+        check_deal_access(db, current_user, request.deal_id)
+
+    from datetime import datetime
+    alert = Alert(
+        user_id=current_user.id,
+        deal_id=request.deal_id,
+        name=request.name,
+        keywords=request.keywords,
+        entities=request.entities,
+        frequency=request.frequency,
+        is_active=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+
+    return alert_to_response(alert)
+
+
+@router.get("/alerts", response_model=AlertListResponse)
+async def list_alerts(
+    include_inactive: bool = Query(False, description="Include inactive alerts"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all alerts for the current user.
+
+    - **include_inactive**: Whether to include inactive alerts (default: false)
+    """
+    query = db.query(Alert).filter(Alert.user_id == current_user.id)
+
+    if not include_inactive:
+        query = query.filter(Alert.is_active == True)
+
+    alerts = query.order_by(Alert.created_at.desc()).all()
+
+    return AlertListResponse(
+        alerts=[alert_to_response(a) for a in alerts],
+        total=len(alerts)
+    )
+
+
+@router.get("/alerts/{alert_id}", response_model=AlertResponse)
+async def get_alert(
+    alert_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific alert by ID.
+
+    User must own the alert or be an admin.
+    """
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+
+    # Check ownership
+    if alert.user_id != current_user.id and current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this alert"
+        )
+
+    return alert_to_response(alert)
+
+
+@router.put("/alerts/{alert_id}", response_model=AlertResponse)
+async def update_alert(
+    alert_id: UUID,
+    request: AlertUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update an existing alert.
+
+    User must own the alert or be an admin.
+    """
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+
+    # Check ownership
+    if alert.user_id != current_user.id and current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this alert"
+        )
+
+    # Update fields if provided
+    if request.name is not None:
+        alert.name = request.name
+    if request.keywords is not None:
+        alert.keywords = request.keywords
+    if request.entities is not None:
+        alert.entities = request.entities
+    if request.frequency is not None:
+        alert.frequency = request.frequency
+    if request.is_active is not None:
+        alert.is_active = request.is_active
+
+    from datetime import datetime
+    alert.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(alert)
+
+    return alert_to_response(alert)
+
+
+@router.delete("/alerts/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_alert(
+    alert_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete an alert.
+
+    User must own the alert or be an admin.
+    """
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+
+    # Check ownership
+    if alert.user_id != current_user.id and current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this alert"
+        )
+
+    db.delete(alert)
+    db.commit()
+
+    return None
+
+
+@router.get("/alerts/{alert_id}/matches", response_model=AlertMatchListResponse)
+async def list_alert_matches(
+    alert_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List matches for a specific alert.
+
+    User must own the alert or be an admin.
+    """
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+
+    # Check ownership
+    if alert.user_id != current_user.id and current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this alert"
+        )
+
+    offset = (page - 1) * page_size
+
+    total = db.query(AlertMatch).filter(AlertMatch.alert_id == alert_id).count()
+    matches = (
+        db.query(AlertMatch)
+        .filter(AlertMatch.alert_id == alert_id)
+        .order_by(AlertMatch.matched_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return AlertMatchListResponse(
+        matches=[
+            AlertMatchResponse(
+                id=m.id,
+                alert_id=m.alert_id,
+                headline=m.headline,
+                source=m.source,
+                url=m.url,
+                snippet=m.snippet,
+                published_at=m.published_at,
+                sentiment=m.sentiment,
+                relevance_score=None,  # Convert from UUID type in model
+                keywords_matched=m.keywords_matched or [],
+                notified=m.notified,
+                matched_at=m.matched_at
+            )
+            for m in matches
+        ],
+        total=total
+    )
+
+
+async def check_alerts_background(user_id: UUID, alert_id: UUID):
+    """
+    Background task to check an alert for news matches.
+    This runs the NewsAlertsAgent and stores any matches.
+    """
+    from datetime import datetime
+    from ..core.database import SessionLocal
+    from ..agents.news_alerts import NewsAlertsAgent
+
+    db = SessionLocal()
+    try:
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
+        if not alert or not alert.is_active:
+            return
+
+        # Find a deal to associate with (use alert's deal_id or create a dummy)
+        deal_id = alert.deal_id
+        if not deal_id:
+            # Use user's first deal or skip if no deals
+            first_deal = db.query(Deal).first()
+            if not first_deal:
+                return
+            deal_id = first_deal.id
+
+        # Run the news alerts agent
+        agent = NewsAlertsAgent(db, user_id, deal_id)
+        input_data = {
+            "keywords": alert.keywords or [],
+            "entities": alert.entities or [],
+            "query": alert.name
+        }
+
+        try:
+            output = await agent.execute(input_data)
+
+            # Store matches
+            news_items = output.get("news_items", [])
+            for item in news_items:
+                match = AlertMatch(
+                    alert_id=alert_id,
+                    headline=item.get("headline", "Unknown"),
+                    source=item.get("source", "Unknown"),
+                    url=item.get("url"),
+                    snippet=item.get("snippet"),
+                    published_at=None,  # Would need to parse date
+                    sentiment=item.get("sentiment"),
+                    keywords_matched=item.get("keywords_matched", []),
+                    notified=False,
+                    matched_at=datetime.utcnow()
+                )
+                db.add(match)
+
+            # Update last_checked_at
+            alert.last_checked_at = datetime.utcnow()
+            db.commit()
+
+        except Exception as e:
+            import logging
+            logging.error(f"Error checking alert {alert_id}: {str(e)}")
+
+    finally:
+        db.close()
+
+
+@router.post("/alerts/{alert_id}/check", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_alert_check(
+    alert_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually trigger a check for an alert.
+
+    User must own the alert or be an admin.
+    """
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+
+    # Check ownership
+    if alert.user_id != current_user.id and current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this alert"
+        )
+
+    # Schedule background check
+    background_tasks.add_task(check_alerts_background, current_user.id, alert_id)
+
+    return {"message": "Alert check started", "alert_id": str(alert_id)}

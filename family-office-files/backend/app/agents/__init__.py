@@ -5,6 +5,7 @@ from .base import BaseAgent, AgentInput, AgentOutput
 from .market_research import MarketResearchAgent
 from .document_analysis import DocumentAnalysisAgent
 from .due_diligence import DueDiligenceAgent
+from .news_alerts import NewsAlertsAgent
 
 __all__ = [
     "BaseAgent",
@@ -13,4 +14,5 @@ __all__ = [
     "MarketResearchAgent",
     "DocumentAnalysisAgent",
     "DueDiligenceAgent",
+    "NewsAlertsAgent",
 ]

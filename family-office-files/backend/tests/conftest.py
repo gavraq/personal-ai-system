@@ -17,6 +17,7 @@ from app.models.user import User, UserRole
 from app.models.deal import Deal, DealMember
 from app.models.google import GoogleConnection
 from app.models.file import File, FileShare
+from app.models.alert import Alert, AlertMatch
 
 
 # Use test database (same PostgreSQL but different schema for isolation)
@@ -53,12 +54,12 @@ def test_db():
     Base.metadata.create_all(bind=engine)
     # Clean up BEFORE test - ensure fresh state
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
+        conn.execute(text("TRUNCATE TABLE alert_matches, alerts, agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
         conn.commit()
     yield
     # Clean up AFTER test as well
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
+        conn.execute(text("TRUNCATE TABLE alert_matches, alerts, agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
         conn.commit()
 
 

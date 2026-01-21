@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from ..models.agent import AgentType, AgentStatus, MessageRole
+from ..models.alert import AlertFrequency
 
 
 class AgentRunStartRequest(BaseModel):
@@ -88,4 +89,73 @@ class AgentSummary(BaseModel):
 class AgentSummaryListResponse(BaseModel):
     """Response schema for agent summaries per deal"""
     summaries: list[AgentSummary]
+    total: int
+
+
+# Alert schemas for News & Alerts agent (feat-26)
+
+class AlertCreateRequest(BaseModel):
+    """Request schema for creating an alert"""
+    name: str = Field(..., min_length=1, max_length=255, description="Alert name")
+    keywords: list[str] = Field(default=[], description="Keywords to monitor")
+    entities: list[str] = Field(default=[], description="Entities to track")
+    frequency: AlertFrequency = Field(default=AlertFrequency.DAILY, description="Check frequency")
+    deal_id: Optional[UUID] = Field(default=None, description="Optional deal to associate with")
+
+
+class AlertUpdateRequest(BaseModel):
+    """Request schema for updating an alert"""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    keywords: Optional[list[str]] = None
+    entities: Optional[list[str]] = None
+    frequency: Optional[AlertFrequency] = None
+    is_active: Optional[bool] = None
+
+
+class AlertResponse(BaseModel):
+    """Response schema for a single alert"""
+    id: UUID
+    user_id: UUID
+    deal_id: Optional[UUID] = None
+    name: str
+    keywords: list[str]
+    entities: list[str]
+    frequency: AlertFrequency
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    last_checked_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AlertListResponse(BaseModel):
+    """Response schema for alert list"""
+    alerts: list[AlertResponse]
+    total: int
+
+
+class AlertMatchResponse(BaseModel):
+    """Response schema for an alert match"""
+    id: UUID
+    alert_id: UUID
+    headline: str
+    source: str
+    url: Optional[str] = None
+    snippet: Optional[str] = None
+    published_at: Optional[datetime] = None
+    sentiment: Optional[str] = None
+    relevance_score: Optional[float] = None
+    keywords_matched: list[str]
+    notified: bool
+    matched_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AlertMatchListResponse(BaseModel):
+    """Response schema for alert matches list"""
+    matches: list[AlertMatchResponse]
     total: int

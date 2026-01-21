@@ -46,6 +46,7 @@ class User(Base):
     audit_entries = relationship("AuditLog", back_populates="actor")
     activities = relationship("Activity", back_populates="actor")
     file_shares_received = relationship("FileShare", back_populates="shared_with_user")
+    alerts = relationship("Alert", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User {self.email}>"
