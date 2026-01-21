@@ -109,8 +109,8 @@
 
 ## Phase 5 Completion
 
-- [ ] All 6 features (feat-27, feat-23, feat-24, feat-25, feat-26, feat-28) marked as passing
-- [ ] All 4 agent types functional
-- [ ] Chat UI working with streaming
-- [ ] Results persist and display on dashboard
-- [ ] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm
+- [x] All 6 features (feat-27, feat-23, feat-24, feat-25, feat-26, feat-28) marked as passing ✓ Verified via FeatureRegistry - all 6 features showing as passing
+- [x] All 4 agent types functional ✓ Backend tests cover Market Research, Document Analysis, Due Diligence, News & Alerts agents
+- [x] Chat UI working with streaming ✓ 138/138 frontend tests pass including AgentChat.test.tsx (23 tests)
+- [x] Results persist and display on dashboard ✓ AgentRun model with deal association, AgentSummaryCard tests passing
+- [x] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm ✓ Verified: feat-23, feat-24, feat-25, feat-26, feat-27, feat-28 all passing
