@@ -401,4 +401,101 @@ export const activityApi = {
   },
 }
 
+// Agent API types
+export type AgentType = 'market_research' | 'document_analysis' | 'due_diligence' | 'news_alerts'
+export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed'
+
+export interface AgentRun {
+  id: string
+  deal_id: string
+  user_id: string
+  user_email: string | null
+  agent_type: AgentType
+  status: AgentStatus
+  input: Record<string, unknown>
+  output: Record<string, unknown> | null
+  error_message: string | null
+  started_at: string
+  completed_at: string | null
+}
+
+export interface AgentRunListResponse {
+  runs: AgentRun[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface AgentSummary {
+  id: string
+  deal_id: string
+  deal_title: string
+  agent_type: AgentType
+  status: AgentStatus
+  summary_excerpt: string | null
+  started_at: string
+  completed_at: string | null
+}
+
+export interface AgentSummaryListResponse {
+  summaries: AgentSummary[]
+  total: number
+}
+
+export interface AgentListOptions {
+  page?: number
+  pageSize?: number
+  dealId?: string
+  agentType?: AgentType
+  status?: AgentStatus
+}
+
+// Agent API methods
+export const agentsApi = {
+  listRuns: async (options?: AgentListOptions): Promise<AgentRunListResponse> => {
+    const params = new URLSearchParams()
+    if (options?.page) {
+      params.append('page', options.page.toString())
+    }
+    if (options?.pageSize) {
+      params.append('page_size', options.pageSize.toString())
+    }
+    if (options?.dealId) {
+      params.append('deal_id', options.dealId)
+    }
+    if (options?.agentType) {
+      params.append('agent_type', options.agentType)
+    }
+    if (options?.status) {
+      params.append('status_filter', options.status)
+    }
+    const url = params.toString()
+      ? `/api/agents/runs?${params.toString()}`
+      : '/api/agents/runs'
+    const response = await api.get<AgentRunListResponse>(url)
+    return response.data
+  },
+
+  getRun: async (runId: string): Promise<AgentRun> => {
+    const response = await api.get<AgentRun>(`/api/agents/runs/${runId}`)
+    return response.data
+  },
+
+  listSummaries: async (limit = 10): Promise<AgentSummaryListResponse> => {
+    const response = await api.get<AgentSummaryListResponse>(`/api/agents/summaries?limit=${limit}`)
+    return response.data
+  },
+
+  listDealRuns: async (dealId: string, page = 1, pageSize = 20, agentType?: AgentType): Promise<AgentRunListResponse> => {
+    const params = new URLSearchParams()
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    if (agentType) {
+      params.append('agent_type', agentType)
+    }
+    const response = await api.get<AgentRunListResponse>(`/api/agents/deal/${dealId}/runs?${params.toString()}`)
+    return response.data
+  },
+}
+
 export default api

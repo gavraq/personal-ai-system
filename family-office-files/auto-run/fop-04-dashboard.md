@@ -38,14 +38,14 @@
 
 ## 4.3 Agent Output Summaries (feat-7)
 
-- [ ] Create `frontend/components/dashboard/AgentSummaryCard.tsx`
-- [ ] Display latest agent result per agent type per deal
-- [ ] Show: agent type icon, summary excerpt, timestamp
-- [ ] Expandable to view full output in modal
-- [ ] Quick re-run button on card
-- [ ] Test: Agent summary displays after agent run
-- [ ] Test: Expand shows full output
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-7 passing`
+- [x] Create `frontend/components/dashboard/AgentSummaryCard.tsx` ✓ Full implementation with loading, error, empty states
+- [x] Display latest agent result per agent type per deal ✓ Backend `/api/agents/summaries` returns grouped latest runs
+- [x] Show: agent type icon, summary excerpt, timestamp ✓ Icons for market_research, document_analysis, due_diligence, news_alerts
+- [x] Expandable to view full output in modal ✓ AgentOutputModal component with full input/output display
+- [x] Quick re-run button on card ✓ onRerun callback prop triggers re-run functionality
+- [x] Test: Agent summary displays after agent run ✓ `test_agent_summary_displays_after_agent_run` in test_agents.py
+- [x] Test: Expand shows full output ✓ `test_expand_shows_full_output` in test_agents.py + frontend tests
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-7 passing` ✓ Registry updated
 
 ## 4.4 Quick Actions (feat-8)
 
