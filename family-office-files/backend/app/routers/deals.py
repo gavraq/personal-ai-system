@@ -7,10 +7,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func
+
 from ..core.database import get_db
 from ..core.deps import get_current_user, require_role
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
+from ..models.file import File
 from ..schemas.deal import (
     DealCreate,
     DealUpdate,
@@ -21,6 +24,7 @@ from ..schemas.deal import (
     DealMemberListResponse,
     DealStatusEnum,
 )
+from .activity import log_activity
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
 
@@ -43,6 +47,25 @@ def can_access_deal(db: Session, deal: Deal, user: User) -> bool:
 def can_create_deal(user: User) -> bool:
     """Check if user can create deals (admin or partner only)"""
     return user.role in [UserRole.ADMIN.value, UserRole.PARTNER.value]
+
+
+def get_deal_file_count(db: Session, deal_id: UUID) -> int:
+    """Get the count of files for a deal"""
+    return db.query(func.count(File.id)).filter(File.deal_id == deal_id).scalar() or 0
+
+
+def deal_to_response(db: Session, deal: Deal) -> DealResponse:
+    """Convert Deal model to DealResponse with file_count"""
+    return DealResponse(
+        id=deal.id,
+        title=deal.title,
+        description=deal.description,
+        status=deal.status,
+        created_by=deal.created_by,
+        created_at=deal.created_at,
+        updated_at=deal.updated_at,
+        file_count=get_deal_file_count(db, deal.id)
+    )
 
 
 @router.post("", response_model=DealResponse, status_code=status.HTTP_201_CREATED)
@@ -85,10 +108,19 @@ async def create_deal(
     )
     db.add(member)
 
+    # Log activity
+    log_activity(
+        db=db,
+        deal_id=deal.id,
+        actor_id=current_user.id,
+        action="deal_create",
+        details={"title": deal.title}
+    )
+
     db.commit()
     db.refresh(deal)
 
-    return deal
+    return deal_to_response(db, deal)
 
 
 @router.get("", response_model=DealListResponse)
@@ -124,11 +156,14 @@ async def list_deals(
     # Get total count
     total = query.count()
 
-    # Get paginated deals
-    deals = query.order_by(Deal.created_at.desc()).offset(offset).limit(page_size).all()
+    # Get paginated deals, sorted by last activity (updated_at, then created_at)
+    deals = query.order_by(
+        Deal.updated_at.desc().nullslast(),
+        Deal.created_at.desc()
+    ).offset(offset).limit(page_size).all()
 
     return DealListResponse(
-        deals=[DealResponse.model_validate(d) for d in deals],
+        deals=[deal_to_response(db, d) for d in deals],
         total=total,
         page=page,
         page_size=page_size
@@ -159,7 +194,7 @@ async def get_deal(
             detail="You do not have access to this deal"
         )
 
-    return deal
+    return deal_to_response(db, deal)
 
 
 @router.put("/{deal_id}", response_model=DealResponse)
@@ -216,18 +251,32 @@ async def update_deal(
                 detail=f"Invalid status transition from {current_status} to {new_status}"
             )
 
-    # Update fields
-    if request.title is not None:
+    # Track changes for activity log
+    changes = {}
+    if request.title is not None and request.title != deal.title:
+        changes["title"] = {"old": deal.title, "new": request.title}
         deal.title = request.title
-    if request.description is not None:
+    if request.description is not None and request.description != deal.description:
+        changes["description"] = {"old": deal.description, "new": request.description}
         deal.description = request.description
-    if request.status is not None:
+    if request.status is not None and request.status.value != deal.status:
+        changes["status"] = {"old": deal.status, "new": request.status.value}
         deal.status = request.status.value
+
+    # Log activity if there were changes
+    if changes:
+        log_activity(
+            db=db,
+            deal_id=deal.id,
+            actor_id=current_user.id,
+            action="deal_update",
+            details={"changes": changes}
+        )
 
     db.commit()
     db.refresh(deal)
 
-    return deal
+    return deal_to_response(db, deal)
 
 
 @router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -320,6 +369,16 @@ async def add_deal_member(
         role_override=request.role_override
     )
     db.add(member)
+
+    # Log activity
+    log_activity(
+        db=db,
+        deal_id=deal_id,
+        actor_id=current_user.id,
+        action="member_add",
+        details={"user_email": target_user.email, "user_id": str(request.user_id)}
+    )
+
     db.commit()
     db.refresh(member)
 
@@ -427,6 +486,19 @@ async def remove_deal_member(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Member not found in this deal"
         )
+
+    # Get removed user email for activity log
+    from ..models.user import User as UserModel
+    removed_user = db.query(UserModel).filter(UserModel.id == user_id).first()
+
+    # Log activity
+    log_activity(
+        db=db,
+        deal_id=deal_id,
+        actor_id=current_user.id,
+        action="member_remove",
+        details={"user_email": removed_user.email if removed_user else None, "user_id": str(user_id)}
+    )
 
     db.delete(member)
     db.commit()

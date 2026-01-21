@@ -24,16 +24,16 @@
 
 ## 4.2 Recent Activity Feed (feat-6)
 
-- [ ] Create `backend/app/models/activity.py` with Activity model
-- [ ] Log activities: file_upload, file_link, deal_create, deal_update, agent_run
-- [ ] Implement GET `/api/activity` - paginated activity feed
-- [ ] Filter by user's accessible deals
-- [ ] Include: actor name, action type, target, timestamp
-- [ ] Create `frontend/components/dashboard/ActivityFeed.tsx` component
-- [ ] Show actor avatar, action description, relative timestamp
-- [ ] Auto-refresh every 30 seconds or use WebSocket
-- [ ] Test: Activity appears after file upload within 5s
-- [ ] Test: Only shows activity from accessible deals
+- [x] Create `backend/app/models/activity.py` with Activity model ✓ Activity model already exists in `backend/app/models/audit.py`
+- [x] Log activities: file_upload, file_link, deal_create, deal_update, agent_run ✓ Added `log_activity()` helper in activity.py, integrated into deals.py and files.py routers
+- [x] Implement GET `/api/activity` - paginated activity feed ✓ `backend/app/routers/activity.py` with list and listForDeal endpoints
+- [x] Filter by user's accessible deals ✓ `get_user_accessible_deal_ids()` filters by DealMember for non-admin users
+- [x] Include: actor name, action type, target, timestamp ✓ ActivityResponse schema includes actor_email, action, details, created_at
+- [x] Create `frontend/components/dashboard/ActivityFeed.tsx` component ✓ Full implementation with loading states, error handling, auto-refresh
+- [x] Show actor avatar, action description, relative timestamp ✓ ActivityAvatar component, getActivityDescription(), formatRelativeTime()
+- [x] Auto-refresh every 30 seconds or use WebSocket ✓ useEffect with setInterval at configurable refreshInterval (default 30s)
+- [x] Test: Activity appears after file upload within 5s ✓ `test_activity_logged_on_file_upload` in test_activity.py
+- [x] Test: Only shows activity from accessible deals ✓ `test_activity_feed_only_shows_accessible_deals` in test_activity.py
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-6 passing`
 
 ## 4.3 Agent Output Summaries (feat-7)

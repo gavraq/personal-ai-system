@@ -5,7 +5,7 @@ Main application entry point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import auth_router, users_router, deals_router, integrations_router, files_router
+from .routers import auth_router, users_router, deals_router, integrations_router, files_router, activity_router
 
 app = FastAPI(
     title="Family Office Files API",
@@ -41,3 +41,4 @@ app.include_router(users_router)
 app.include_router(deals_router)
 app.include_router(integrations_router)
 app.include_router(files_router)
+app.include_router(activity_router)

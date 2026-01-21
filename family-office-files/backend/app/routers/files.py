@@ -24,6 +24,7 @@ from ..schemas.file import (
     ShareFileResponse,
     FileShareResponse,
 )
+from .activity import log_activity
 
 router = APIRouter(prefix="/api", tags=["files"])
 
@@ -150,6 +151,17 @@ async def link_drive_file(
     )
 
     db.add(file)
+    db.flush()
+
+    # Log activity
+    log_activity(
+        db=db,
+        deal_id=deal_id,
+        actor_id=current_user.id,
+        action="file_link",
+        details={"file_name": file.name, "file_id": str(file.id), "source": "drive"}
+    )
+
     db.commit()
     db.refresh(file)
 
@@ -260,6 +272,16 @@ async def upload_file(
     )
 
     db.add(file_record)
+
+    # Log activity
+    log_activity(
+        db=db,
+        deal_id=deal_id,
+        actor_id=current_user.id,
+        action="file_upload",
+        details={"file_name": filename, "file_id": str(file_id), "source": "gcs", "size_bytes": file_size}
+    )
+
     db.commit()
     db.refresh(file_record)
 
@@ -463,6 +485,15 @@ async def delete_file(
             # Log the error but continue with database deletion
             # The file record should be removed even if GCS deletion fails
             print(f"Warning: Failed to delete file from GCS: {e}")
+
+    # Log activity before deletion
+    log_activity(
+        db=db,
+        deal_id=file.deal_id,
+        actor_id=current_user.id,
+        action="file_delete",
+        details={"file_name": file.name, "file_id": str(file.id)}
+    )
 
     # Delete the file record
     db.delete(file)

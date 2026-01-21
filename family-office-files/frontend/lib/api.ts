@@ -130,6 +130,7 @@ export interface Deal {
   created_by: string
   created_at: string
   updated_at: string | null
+  file_count: number
 }
 
 export interface DealListResponse {
@@ -337,6 +338,65 @@ export const filesApi = {
 
   share: async (fileId: string, data: ShareFileRequest): Promise<ShareFileResponse> => {
     const response = await api.post<ShareFileResponse>(`/api/files/${fileId}/share`, data)
+    return response.data
+  },
+}
+
+// Activity API types
+export type ActivityType = 'file_upload' | 'file_link' | 'file_delete' | 'deal_create' | 'deal_update' | 'deal_delete' | 'member_add' | 'member_remove' | 'agent_run'
+
+export interface Activity {
+  id: string
+  deal_id: string
+  actor_id: string
+  actor_email: string | null
+  action: ActivityType
+  details: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface ActivityListResponse {
+  activities: Activity[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface ActivityListOptions {
+  page?: number
+  pageSize?: number
+  dealId?: string
+  action?: ActivityType
+}
+
+// Activity API methods
+export const activityApi = {
+  list: async (options?: ActivityListOptions): Promise<ActivityListResponse> => {
+    const params = new URLSearchParams()
+    if (options?.page) {
+      params.append('page', options.page.toString())
+    }
+    if (options?.pageSize) {
+      params.append('page_size', options.pageSize.toString())
+    }
+    if (options?.dealId) {
+      params.append('deal_id', options.dealId)
+    }
+    if (options?.action) {
+      params.append('action', options.action)
+    }
+    const url = params.toString()
+      ? `/api/activity?${params.toString()}`
+      : '/api/activity'
+    const response = await api.get<ActivityListResponse>(url)
+    return response.data
+  },
+
+  listForDeal: async (dealId: string, page = 1, pageSize = 20): Promise<ActivityListResponse> => {
+    const params = new URLSearchParams()
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    const response = await api.get<ActivityListResponse>(`/api/activity/deal/${dealId}?${params.toString()}`)
     return response.data
   },
 }
