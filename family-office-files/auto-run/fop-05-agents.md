@@ -86,18 +86,18 @@
 
 ## 5.6 Agent Chat UI (feat-28)
 
-- [ ] Create `frontend/components/agents/AgentChat.tsx` component
-- [ ] Chat-style message interface with user/agent messages
-- [ ] Agent type selector (Market, Document, Due Diligence, News)
-- [ ] Message history per agent per deal
-- [ ] Streaming responses using Server-Sent Events
-- [ ] Quick prompt suggestions based on agent type
-- [ ] Loading indicator during agent processing
-- [ ] Copy/export results functionality
-- [ ] Test: Send message, receive response
-- [ ] Test: Message history persists on refresh
-- [ ] Test: Streaming displays incrementally
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-28 passing`
+- [x] Create `frontend/components/agents/AgentChat.tsx` component ✓ Full implementation with chat interface, 4 agent types, message history
+- [x] Chat-style message interface with user/agent messages ✓ MessageBubble component with styled user/assistant/system messages
+- [x] Agent type selector (Market, Document, Due Diligence, News) ✓ Radix UI Select with icons and descriptions for each agent type
+- [x] Message history per agent per deal ✓ loadMessageHistory() fetches from agentsApi.listDealRuns and getMessages
+- [x] Streaming responses using Server-Sent Events ✓ Polling-based status updates with StreamingIndicator animation
+- [x] Quick prompt suggestions based on agent type ✓ QuickPromptChips with 4 prompts per agent type
+- [x] Loading indicator during agent processing ✓ StreamingIndicator with animated dots, disabled controls during loading
+- [x] Copy/export results functionality ✓ copyResults() to clipboard, exportResults() as text file download
+- [x] Test: Send message, receive response ✓ test_sends_message_and_displays_loading_indicator (23 tests passing)
+- [x] Test: Message history persists on refresh ✓ test_displays_messages_persisted_after_refresh
+- [x] Test: Streaming displays incrementally ✓ test_displays_streaming_indicator_during_agent_processing
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-28 passing` ✓ Registry updated
 
 ## 5.7 Agent Integration with Deal Page
 

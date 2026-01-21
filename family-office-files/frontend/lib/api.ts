@@ -450,6 +450,30 @@ export interface AgentListOptions {
   status?: AgentStatus
 }
 
+export interface AgentMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  created_at: string
+}
+
+export interface AgentMessagesResponse {
+  messages: AgentMessage[]
+  total: number
+}
+
+export interface AgentRunStartRequest {
+  query?: string
+  file_id?: string
+  context?: Record<string, unknown>
+}
+
+export interface AgentRunStartResponse {
+  run_id: string
+  status: AgentStatus
+  message: string
+}
+
 // Agent API methods
 export const agentsApi = {
   listRuns: async (options?: AgentListOptions): Promise<AgentRunListResponse> => {
@@ -494,6 +518,18 @@ export const agentsApi = {
       params.append('agent_type', agentType)
     }
     const response = await api.get<AgentRunListResponse>(`/api/agents/deal/${dealId}/runs?${params.toString()}`)
+    return response.data
+  },
+
+  startRun: async (agentType: AgentType, dealId: string, request: AgentRunStartRequest): Promise<AgentRunStartResponse> => {
+    const params = new URLSearchParams()
+    params.append('deal_id', dealId)
+    const response = await api.post<AgentRunStartResponse>(`/api/agents/${agentType}/run?${params.toString()}`, request)
+    return response.data
+  },
+
+  getMessages: async (runId: string): Promise<AgentMessagesResponse> => {
+    const response = await api.get<AgentMessagesResponse>(`/api/agents/runs/${runId}/messages`)
     return response.data
   },
 }
