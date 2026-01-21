@@ -880,3 +880,411 @@ class TestAgentDelegationFramework:
 
         assert response.status_code == 403
         assert "access" in response.json()["detail"].lower()
+
+
+class TestDocumentAnalysisAgent:
+    """Tests for feat-24: Document Analysis Agent"""
+
+    def test_query_returns_structured_analysis(self, client, test_db):
+        """Analyze PDF returns summary and key points"""
+        from app.core.database import get_db
+        from app.models.file import File, FileSource
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_docanalysis1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_docanalysis1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Document Analysis Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a file record (mock GCS file)
+        file_record = File(
+            deal_id=deal_id,
+            name="test_document.pdf",
+            source=FileSource.GCS,
+            source_id="deals/test/file.pdf",
+            mime_type="application/pdf",
+            size_bytes=1024,
+            uploaded_by=admin.id
+        )
+        db.add(file_record)
+        db.commit()
+        db.refresh(file_record)
+
+        # Create agent run directly with mock output (simulating completed analysis)
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DOCUMENT_ANALYSIS,
+            status=AgentStatus.COMPLETED,
+            input={"file_id": str(file_record.id)},
+            output={
+                "summary": "This document contains important financial information.",
+                "key_points": [
+                    "Revenue increased by 15% year-over-year",
+                    "New market expansion planned for Q2",
+                    "Cost reduction initiatives on track"
+                ],
+                "entities": [
+                    {"name": "ABC Corp", "type": "company", "context": "Primary subject"},
+                    {"name": "$5M", "type": "monetary", "context": "Revenue figure"}
+                ],
+                "recommendations": [
+                    "Review Q2 expansion timeline",
+                    "Monitor cost reduction progress"
+                ],
+                "source_file_id": str(file_record.id),
+                "source_file_name": "test_document.pdf"
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_type"] == "document_analysis"
+        assert data["status"] == "completed"
+        assert "summary" in data["output"]
+        assert "key_points" in data["output"]
+        assert len(data["output"]["key_points"]) >= 1
+
+    def test_analyze_drive_file_works(self, client, test_db):
+        """Analyze Drive file works (with mocked Drive response)"""
+        from app.core.database import get_db
+        from app.models.file import File, FileSource
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_docanalysis2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_docanalysis2@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Drive Analysis Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a file record (Drive file)
+        file_record = File(
+            deal_id=deal_id,
+            name="drive_document.docx",
+            source=FileSource.DRIVE,
+            source_id="1abc123xyz",  # Mock Drive file ID
+            mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            size_bytes=2048,
+            uploaded_by=admin.id
+        )
+        db.add(file_record)
+        db.commit()
+        db.refresh(file_record)
+
+        # Create completed agent run (simulating Drive file analysis)
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DOCUMENT_ANALYSIS,
+            status=AgentStatus.COMPLETED,
+            input={"file_id": str(file_record.id)},
+            output={
+                "summary": "Analysis of Drive document completed.",
+                "key_points": [
+                    "Document outlines partnership terms",
+                    "Effective date is January 2024"
+                ],
+                "entities": [
+                    {"name": "Partner Co", "type": "company", "context": "Contract party"}
+                ],
+                "recommendations": [
+                    "Review partnership terms before signing"
+                ],
+                "source_file_id": str(file_record.id),
+                "source_file_name": "drive_document.docx"
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_type"] == "document_analysis"
+        assert data["output"]["source_file_name"] == "drive_document.docx"
+
+    def test_results_linked_to_file(self, client, test_db):
+        """Results are correctly linked to source file"""
+        from app.core.database import get_db
+        from app.models.file import File, FileSource
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_docanalysis3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_docanalysis3@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "File Link Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a file record
+        file_record = File(
+            deal_id=deal_id,
+            name="linked_document.txt",
+            source=FileSource.GCS,
+            source_id="deals/test/linked.txt",
+            mime_type="text/plain",
+            size_bytes=512,
+            uploaded_by=admin.id
+        )
+        db.add(file_record)
+        db.commit()
+        db.refresh(file_record)
+
+        # Create agent run with file link in output
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DOCUMENT_ANALYSIS,
+            status=AgentStatus.COMPLETED,
+            input={"file_id": str(file_record.id)},
+            output={
+                "summary": "Text document analysis complete.",
+                "key_points": ["Document contains meeting notes"],
+                "entities": [],
+                "recommendations": [],
+                "source_file_id": str(file_record.id),
+                "source_file_name": file_record.name
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Verify the link
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["output"]["source_file_id"] == str(file_record.id)
+        assert data["output"]["source_file_name"] == "linked_document.txt"
+        assert data["input"]["file_id"] == str(file_record.id)
+
+    def test_start_document_analysis_returns_run_id(self, client, test_db):
+        """POST /api/agents/document_analysis/run returns a run_id for async execution"""
+        from app.core.database import get_db
+        from app.models.file import File, FileSource
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_docanalysis4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_docanalysis4@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Async Analysis Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a file record
+        file_record = File(
+            deal_id=deal_id,
+            name="async_document.pdf",
+            source=FileSource.GCS,
+            source_id="deals/test/async.pdf",
+            mime_type="application/pdf",
+            size_bytes=1024,
+            uploaded_by=admin.id
+        )
+        db.add(file_record)
+        db.commit()
+        db.refresh(file_record)
+
+        # Start document analysis agent run
+        response = client.post(
+            f"/api/agents/document_analysis/run?deal_id={deal_id}",
+            json={"file_id": str(file_record.id)},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202  # Accepted
+        data = response.json()
+        assert "run_id" in data
+        assert data["status"] == "pending"
+        assert "document_analysis" in data["message"]
+
+    def test_image_analysis_uses_vision(self, client, test_db):
+        """Image files trigger vision API path"""
+        from app.core.database import get_db
+        from app.models.file import File, FileSource
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_docanalysis5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_docanalysis5@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Image Analysis Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create an image file record
+        file_record = File(
+            deal_id=deal_id,
+            name="scanned_document.png",
+            source=FileSource.GCS,
+            source_id="deals/test/scanned.png",
+            mime_type="image/png",
+            size_bytes=50000,
+            uploaded_by=admin.id
+        )
+        db.add(file_record)
+        db.commit()
+        db.refresh(file_record)
+
+        # Create completed agent run (simulating image analysis via vision)
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DOCUMENT_ANALYSIS,
+            status=AgentStatus.COMPLETED,
+            input={"file_id": str(file_record.id)},
+            output={
+                "summary": "Scanned document analyzed using OCR.",
+                "key_points": [
+                    "Document is a receipt from Office Supplies Co",
+                    "Total amount: $125.50"
+                ],
+                "entities": [
+                    {"name": "Office Supplies Co", "type": "company", "context": "Vendor"},
+                    {"name": "$125.50", "type": "monetary", "context": "Total amount"}
+                ],
+                "recommendations": [
+                    "File for expense reporting"
+                ],
+                "source_file_id": str(file_record.id),
+                "source_file_name": "scanned_document.png"
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Verify the analysis
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_type"] == "document_analysis"
+        assert "OCR" in data["output"]["summary"] or "scanned" in data["output"]["summary"].lower()

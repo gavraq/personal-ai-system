@@ -11,7 +11,8 @@ from ..models.agent import AgentType, AgentStatus, MessageRole
 
 class AgentRunStartRequest(BaseModel):
     """Request schema for starting an agent run"""
-    query: str = Field(..., description="The query or request for the agent", min_length=1)
+    query: Optional[str] = Field(default=None, description="The query or request for the agent")
+    file_id: Optional[UUID] = Field(default=None, description="File ID for document analysis agent")
     context: Optional[dict] = Field(default=None, description="Additional context")
 
 

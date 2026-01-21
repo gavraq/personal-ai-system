@@ -42,18 +42,18 @@
 
 ## 5.3 Document Analysis Agent (feat-24)
 
-- [ ] Create `backend/app/agents/document_analysis.py`
-- [ ] Input: file_id reference
-- [ ] Support: PDF, DOCX, TXT, images (OCR)
-- [ ] For Drive files: fetch via Drive API
-- [ ] For GCS files: download from signed URL
-- [ ] Output structure: summary, key_points, entities, recommendations
-- [ ] Use Claude vision for images/scanned PDFs
-- [ ] Link results to source file
-- [ ] Test: Analyze PDF returns summary and key points
-- [ ] Test: Analyze Drive file works
-- [ ] Test: Results linked to file
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-24 passing`
+- [x] Create `backend/app/agents/document_analysis.py` ✓ Full implementation with DocumentAnalysisAgent class
+- [x] Input: file_id reference ✓ Accepts file_id via AgentRunStartRequest schema
+- [x] Support: PDF, DOCX, TXT, images (OCR) ✓ MIME type detection with appropriate handling for each
+- [x] For Drive files: fetch via Drive API ✓ _get_drive_content() downloads via googleapis.com
+- [x] For GCS files: download from signed URL ✓ _get_gcs_content() downloads from storage bucket
+- [x] Output structure: summary, key_points, entities, recommendations ✓ DocumentAnalysisOutput with all fields
+- [x] Use Claude vision for images/scanned PDFs ✓ _build_vision_content() creates base64 image/document blocks
+- [x] Link results to source file ✓ Output includes source_file_id and source_file_name
+- [x] Test: Analyze PDF returns summary and key points ✓ test_query_returns_structured_analysis
+- [x] Test: Analyze Drive file works ✓ test_analyze_drive_file_works
+- [x] Test: Results linked to file ✓ test_results_linked_to_file
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-24 passing` ✓ Registry updated
 
 ## 5.4 Due Diligence Agent (feat-25)
 

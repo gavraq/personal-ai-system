@@ -343,6 +343,7 @@ async def run_agent_in_background(
     from datetime import datetime
     from ..core.database import SessionLocal
     from ..agents.market_research import MarketResearchAgent
+    from ..agents.document_analysis import DocumentAnalysisAgent
 
     db = SessionLocal()
     try:
@@ -356,6 +357,9 @@ async def run_agent_in_background(
         # Route to appropriate agent implementation
         if agent_type == AgentType.MARKET_RESEARCH:
             agent = MarketResearchAgent(db, user_id, deal_id)
+            output = await agent.execute(input_data)
+        elif agent_type == AgentType.DOCUMENT_ANALYSIS:
+            agent = DocumentAnalysisAgent(db, user_id, deal_id)
             output = await agent.execute(input_data)
         else:
             # Fallback mock for agents not yet implemented
@@ -419,13 +423,20 @@ async def start_agent_run(
     # Check deal access
     check_deal_access(db, current_user, deal_id)
 
-    # Create agent run record with pending status
+    # Build input data based on agent type
     from datetime import datetime
+    input_data = {"context": request.context}
+    if request.query:
+        input_data["query"] = request.query
+    if request.file_id:
+        input_data["file_id"] = str(request.file_id)
+
+    # Create agent run record with pending status
     agent_run = AgentRun(
         deal_id=deal_id,
         user_id=current_user.id,
         agent_type=agent_type,
-        input={"query": request.query, "context": request.context},
+        input=input_data,
         status=AgentStatus.PENDING,
         started_at=datetime.utcnow()
     )
@@ -434,10 +445,11 @@ async def start_agent_run(
     db.refresh(agent_run)
 
     # Add user message
+    user_message_content = request.query or f"Analyze file: {request.file_id}"
     user_message = AgentMessage(
         agent_run_id=agent_run.id,
         role="user",
-        content=request.query,
+        content=user_message_content,
         created_at=datetime.utcnow()
     )
     db.add(user_message)
@@ -449,7 +461,7 @@ async def start_agent_run(
             run_agent_in_background,
             agent_type,
             agent_run.id,
-            {"query": request.query, "context": request.context},
+            input_data,
             current_user.id,
             deal_id
         )
