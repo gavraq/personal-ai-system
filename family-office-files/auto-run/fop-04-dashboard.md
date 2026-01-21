@@ -49,16 +49,16 @@
 
 ## 4.4 Quick Actions (feat-8)
 
-- [ ] Create `frontend/components/dashboard/QuickActions.tsx` component
-- [ ] "Create Deal" button - opens CreateDealModal (Admin/Partner)
-- [ ] "Upload File" button - opens file picker with deal selector (Admin/Partner)
-- [ ] "Run Agent" dropdown - agent type selector (all roles)
-- [ ] Respect role permissions (hide buttons for unauthorized)
-- [ ] Keyboard shortcuts: Cmd+N (new deal), Cmd+U (upload)
-- [ ] Test: All buttons visible for Admin
-- [ ] Test: Viewer only sees Run Agent
-- [ ] Test: Create Deal opens modal
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-8 passing`
+- [x] Create `frontend/components/dashboard/QuickActions.tsx` component ✓ Full implementation with role-based visibility
+- [x] "Create Deal" button - opens CreateDealModal (Admin/Partner) ✓ Uses existing CreateDealModal with custom trigger
+- [x] "Upload File" button - opens file picker with deal selector (Admin/Partner) ✓ Dialog with deal selector and FileUploader integration
+- [x] "Run Agent" dropdown - agent type selector (all roles) ✓ Dialog with deal and agent type selectors
+- [x] Respect role permissions (hide buttons for unauthorized) ✓ canCreateDeal and canUploadFile flags based on userRole
+- [x] Keyboard shortcuts: Cmd+N (new deal), Cmd+U (upload) ✓ useEffect with keydown listener for metaKey/ctrlKey
+- [x] Test: All buttons visible for Admin ✓ `shows all buttons for Admin role` test passes
+- [x] Test: Viewer only sees Run Agent ✓ `only shows Run Agent button for Viewer role` test passes
+- [x] Test: Create Deal opens modal ✓ `calls onDealCreated callback when deal is created` test passes
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-8 passing` ✓ Registry updated
 
 ## 4.5 Dashboard Layout
 
