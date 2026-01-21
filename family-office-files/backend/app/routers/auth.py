@@ -3,13 +3,15 @@ Authentication router for user registration and login
 """
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 
 from ..core.database import get_db
 from ..core.security import create_access_token, create_refresh_token, verify_token
+from ..core.token_blacklist import blacklist_token
 from ..core.deps import get_current_user
 from ..models.user import User, UserRole
 from ..schemas.auth import (
@@ -17,9 +19,13 @@ from ..schemas.auth import (
     LoginRequest,
     TokenResponse,
     RefreshRequest,
+    LogoutRequest,
     UserResponse,
     MessageResponse,
 )
+
+# HTTP Bearer for extracting token from header
+security = HTTPBearer()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -157,20 +163,42 @@ async def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(current_user: User = Depends(get_current_user)):
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    logout_request: LogoutRequest = None,
+    db: Session = Depends(get_db)
+):
     """
-    Logout the current user.
+    Logout the current user by blacklisting their tokens.
 
-    Note: This endpoint invalidates the current session. In a production system,
-    this would add the token to a blacklist (Redis or DB). For now, it simply
-    confirms logout and clients should discard their tokens.
+    - Blacklists the access token from the Authorization header
+    - Optionally blacklists the refresh token if provided in body
 
-    Requires valid access token.
+    Requires valid access token in Authorization header.
     """
-    # In a full implementation, we would:
-    # 1. Add the current token to a blacklist in Redis
-    # 2. Track token JTI (JWT ID) for invalidation
-    # For feat-4 (Session Management), we'll implement proper token blacklisting
+    # Verify and decode the access token to get its JTI and expiration
+    access_token = credentials.credentials
+    token_payload = verify_token(access_token, token_type="access", check_blacklist=False)
+
+    if token_payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Blacklist the access token
+    blacklist_token(token_payload.jti, token_payload.exp)
+
+    # If refresh token provided, blacklist it too
+    if logout_request and logout_request.refresh_token:
+        refresh_payload = verify_token(
+            logout_request.refresh_token,
+            token_type="refresh",
+            check_blacklist=False
+        )
+        if refresh_payload:
+            blacklist_token(refresh_payload.jti, refresh_payload.exp)
 
     return MessageResponse(message="Successfully logged out")
 

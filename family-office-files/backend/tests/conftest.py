@@ -3,6 +3,7 @@ Pytest fixtures for testing
 """
 import os
 import pytest
+import redis
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -21,6 +22,12 @@ from app.models.user import User, UserRole
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     os.getenv("DATABASE_URL", "postgresql://fop_user:fop_password@db:5432/fop_db")
+)
+
+# Redis URL for testing
+TEST_REDIS_URL = os.getenv(
+    "TEST_REDIS_URL",
+    os.getenv("REDIS_URL", "redis://redis:6379/0")
 )
 
 engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
@@ -49,7 +56,23 @@ def test_db():
 
 
 @pytest.fixture(scope="function")
-def client(test_db):
+def test_redis():
+    """Clear Redis test data before each test"""
+    try:
+        redis_client = redis.from_url(TEST_REDIS_URL, decode_responses=True)
+        # Clear blacklist keys
+        for key in redis_client.scan_iter("blacklist:*"):
+            redis_client.delete(key)
+        for key in redis_client.scan_iter("user_blacklist:*"):
+            redis_client.delete(key)
+        yield redis_client
+    except redis.RedisError:
+        # Redis not available, skip cleanup
+        yield None
+
+
+@pytest.fixture(scope="function")
+def client(test_db, test_redis):
     """Create test client with database override"""
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:

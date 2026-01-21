@@ -4,6 +4,7 @@ Authentication schemas for request/response validation
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -37,6 +38,11 @@ class TokenResponse(BaseModel):
 class RefreshRequest(BaseModel):
     """Schema for token refresh request"""
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    """Schema for logout request - includes refresh token for full session invalidation"""
+    refresh_token: Optional[str] = None  # Optional - if provided, blacklist refresh token too
 
 
 class UserResponse(BaseModel):

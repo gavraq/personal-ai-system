@@ -267,3 +267,140 @@ class TestLogout:
         response = client.post("/api/auth/logout")
 
         assert response.status_code == 403  # HTTPBearer returns 403 when no credentials
+
+
+class TestSessionManagement:
+    """Tests for session management (feat-4) - token blacklist functionality"""
+
+    def test_logout_invalidates_access_token(self, client):
+        """After logout, the access token should be blacklisted and rejected"""
+        # Register and login
+        client.post(
+            "/api/auth/register",
+            json={"email": "session@example.com", "password": "securepassword123"}
+        )
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "session@example.com", "password": "securepassword123"}
+        )
+        access_token = login_response.json()["access_token"]
+
+        # Verify token works before logout
+        me_response = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        assert me_response.status_code == 200
+
+        # Logout
+        logout_response = client.post(
+            "/api/auth/logout",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        assert logout_response.status_code == 200
+
+        # Try to use the same token after logout - should fail
+        me_response_after = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        assert me_response_after.status_code == 401
+
+    def test_logout_with_refresh_token_invalidates_both(self, client):
+        """Logout with refresh token provided should blacklist both tokens"""
+        # Register and login
+        client.post(
+            "/api/auth/register",
+            json={"email": "bothtoken@example.com", "password": "securepassword123"}
+        )
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "bothtoken@example.com", "password": "securepassword123"}
+        )
+        tokens = login_response.json()
+        access_token = tokens["access_token"]
+        refresh_token = tokens["refresh_token"]
+
+        # Logout with refresh token
+        logout_response = client.post(
+            "/api/auth/logout",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={"refresh_token": refresh_token}
+        )
+        assert logout_response.status_code == 200
+
+        # Try to refresh with the blacklisted refresh token - should fail
+        refresh_response = client.post(
+            "/api/auth/refresh",
+            json={"refresh_token": refresh_token}
+        )
+        assert refresh_response.status_code == 401
+
+    def test_new_login_after_logout_gets_valid_tokens(self, client):
+        """After logout, user can login again and get new valid tokens"""
+        # Register and login
+        client.post(
+            "/api/auth/register",
+            json={"email": "relogin@example.com", "password": "securepassword123"}
+        )
+        login_response1 = client.post(
+            "/api/auth/login",
+            json={"email": "relogin@example.com", "password": "securepassword123"}
+        )
+        access_token1 = login_response1.json()["access_token"]
+
+        # Logout
+        client.post(
+            "/api/auth/logout",
+            headers={"Authorization": f"Bearer {access_token1}"}
+        )
+
+        # Login again
+        login_response2 = client.post(
+            "/api/auth/login",
+            json={"email": "relogin@example.com", "password": "securepassword123"}
+        )
+        access_token2 = login_response2.json()["access_token"]
+
+        # New token should work
+        me_response = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {access_token2}"}
+        )
+        assert me_response.status_code == 200
+        assert me_response.json()["email"] == "relogin@example.com"
+
+    def test_refresh_token_generates_new_valid_tokens(self, client):
+        """Token refresh should return new tokens that work"""
+        # Register and login
+        client.post(
+            "/api/auth/register",
+            json={"email": "refreshnew@example.com", "password": "securepassword123"}
+        )
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "refreshnew@example.com", "password": "securepassword123"}
+        )
+        tokens = login_response.json()
+        original_access = tokens["access_token"]
+        original_refresh = tokens["refresh_token"]
+
+        # Refresh tokens
+        refresh_response = client.post(
+            "/api/auth/refresh",
+            json={"refresh_token": original_refresh}
+        )
+        assert refresh_response.status_code == 200
+
+        new_tokens = refresh_response.json()
+        new_access = new_tokens["access_token"]
+
+        # New access token should work
+        me_response = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {new_access}"}
+        )
+        assert me_response.status_code == 200
+
+        # New token should be different from original
+        assert new_access != original_access

@@ -3,7 +3,7 @@ JWT token creation and verification utilities
 """
 from datetime import datetime, timedelta
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from jose import jwt, JWTError, ExpiredSignatureError
 from pydantic import BaseModel
@@ -21,6 +21,8 @@ class TokenPayload(BaseModel):
     sub: str  # user id
     exp: datetime
     type: str  # "access" or "refresh"
+    jti: str  # JWT token ID for blacklist tracking
+    iat: datetime  # issued at timestamp
 
 
 def create_access_token(user_id: UUID) -> str:
@@ -33,11 +35,14 @@ def create_access_token(user_id: UUID) -> str:
     Returns:
         Encoded JWT access token string
     """
-    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expiry_minutes)
+    now = datetime.utcnow()
+    expire = now + timedelta(minutes=settings.jwt_expiry_minutes)
     payload = {
         "sub": str(user_id),
         "exp": expire,
-        "type": "access"
+        "type": "access",
+        "jti": str(uuid4()),  # Unique token ID for blacklist tracking
+        "iat": now.timestamp()  # Issued at timestamp
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
@@ -52,22 +57,26 @@ def create_refresh_token(user_id: UUID) -> str:
     Returns:
         Encoded JWT refresh token string
     """
-    expire = datetime.utcnow() + timedelta(days=settings.refresh_token_expiry_days)
+    now = datetime.utcnow()
+    expire = now + timedelta(days=settings.refresh_token_expiry_days)
     payload = {
         "sub": str(user_id),
         "exp": expire,
-        "type": "refresh"
+        "type": "refresh",
+        "jti": str(uuid4()),  # Unique token ID for blacklist tracking
+        "iat": now.timestamp()  # Issued at timestamp
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
 
-def verify_token(token: str, token_type: str = "access") -> Optional[TokenPayload]:
+def verify_token(token: str, token_type: str = "access", check_blacklist: bool = True) -> Optional[TokenPayload]:
     """
     Verify and decode a JWT token.
 
     Args:
         token: The JWT token string
         token_type: Expected token type ("access" or "refresh")
+        check_blacklist: Whether to check if token is blacklisted
 
     Returns:
         TokenPayload if valid, None otherwise
@@ -79,10 +88,29 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenPayloa
         if payload.get("type") != token_type:
             return None
 
+        jti = payload.get("jti", "")
+        iat = payload.get("iat", 0)
+
+        # Check if token is blacklisted
+        if check_blacklist and jti:
+            from .token_blacklist import is_token_blacklisted, get_user_blacklist_timestamp
+
+            if is_token_blacklisted(jti):
+                return None
+
+            # Check user-level blacklist
+            user_blacklist_time = get_user_blacklist_timestamp(payload["sub"])
+            if user_blacklist_time:
+                token_issued = datetime.fromtimestamp(iat) if iat else datetime.min
+                if token_issued < user_blacklist_time:
+                    return None
+
         return TokenPayload(
             sub=payload["sub"],
             exp=datetime.fromtimestamp(payload["exp"]),
-            type=payload["type"]
+            type=payload["type"],
+            jti=jti,
+            iat=datetime.fromtimestamp(iat) if iat else datetime.utcnow()
         )
     except ExpiredSignatureError:
         return None

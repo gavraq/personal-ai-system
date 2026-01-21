@@ -64,11 +64,11 @@
 
 ## 1.6 Session Management (feat-4)
 
-- [ ] Implement token blacklist for logout (Redis or DB table)
-- [ ] Add automatic token refresh logic
-- [ ] Test: Token expiry triggers refresh or redirect
-- [ ] Test: Logout invalidates tokens
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-4 passing`
+- [x] Implement token blacklist for logout (Redis or DB table) *(COMPLETED 2026-01-21: Created token_blacklist.py with Redis-based blacklist using JTI tracking and automatic TTL expiry)*
+- [x] Add automatic token refresh logic *(COMPLETED 2026-01-21: JTI/IAT fields added to tokens, blacklist checks in verify_token, refresh endpoint generates new tokens with unique JTIs)*
+- [x] Test: Token expiry triggers refresh or redirect *(COMPLETED 2026-01-21: test_refresh_token_generates_new_valid_tokens passes)*
+- [x] Test: Logout invalidates tokens *(COMPLETED 2026-01-21: test_logout_invalidates_access_token and test_logout_with_refresh_token_invalidates_both pass)*
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-4 passing` *(DONE - 34 tests passing)*
 
 ## 1.7 Next.js Frontend Setup
 
