@@ -21,7 +21,7 @@
 - [x] Test: Create deal with valid data returns 201 ✅ Test written + API verified
 - [x] Test: Create deal without title returns 400 ✅ Returns 422 (Pydantic validation)
 - [x] Test: Viewer cannot create deal (403) ✅ Test written + API verified
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-9 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-9 passing` ✅
 
 ## 2.2 Edit Deal Metadata (feat-10)
 
@@ -32,7 +32,7 @@
 - [ ] Create audit log entry for changes (deferred - requires audit log implementation)
 - [x] Test: Edit deal title persists on refresh ✅ Test written
 - [x] Test: Non-member cannot edit (403) ✅ Test written
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-10 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-10 passing` ✅
 
 ## 2.3 Deal Permissions (feat-11)
 
@@ -45,7 +45,7 @@
 - [x] Test: Add member grants deal access ✅ Test written
 - [x] Test: Remove member revokes access ✅ Test written
 - [x] Test: Non-member cannot access deal (403) ✅ Test written
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-11 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-11 passing` ✅
 
 ## 2.4 Deal Status Workflow (feat-12)
 
@@ -55,7 +55,7 @@
 - [ ] Track status history in audit_log (deferred - requires audit log implementation)
 - [x] Test: Change status from Draft to Active ✅ Test written
 - [ ] Test: Upload to Closed deal returns 403 (deferred - requires file upload implementation)
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-12 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-12 passing` ✅
 
 ## 2.5 Deal Frontend UI
 
