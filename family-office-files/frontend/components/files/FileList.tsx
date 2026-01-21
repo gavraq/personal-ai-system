@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { filesApi, DealFile, FileSource, FileSortBy, SortOrder, FileListOptions } from '@/lib/api'
+import { FilePreview } from './FilePreview'
 
 // Icons
 const DriveIcon = () => (
@@ -43,6 +44,13 @@ const DownloadIcon = () => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+)
+
+const EyeIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 )
 
@@ -91,6 +99,10 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
   const [sortBy, setSortBy] = useState<FileSortBy>('date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
+  // Preview state
+  const [previewFile, setPreviewFile] = useState<DealFile | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -137,6 +149,11 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
     } catch (err) {
       console.error('Error getting download URL:', err)
     }
+  }
+
+  const handlePreview = (file: DealFile) => {
+    setPreviewFile(file)
+    setPreviewOpen(true)
   }
 
   const toggleSortOrder = () => {
@@ -269,15 +286,24 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
               </div>
 
               {/* Actions */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDownload(file)}
-                title="Download"
-                className="shrink-0"
-              >
-                <DownloadIcon />
-              </Button>
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePreview(file)}
+                  title="Preview"
+                >
+                  <EyeIcon />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDownload(file)}
+                  title="Download"
+                >
+                  <DownloadIcon />
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
@@ -289,6 +315,13 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
           {files.length} file{files.length !== 1 ? 's' : ''}
         </p>
       )}
+
+      {/* File preview modal */}
+      <FilePreview
+        file={previewFile}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </div>
   )
 }

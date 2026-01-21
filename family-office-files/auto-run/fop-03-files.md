@@ -104,16 +104,32 @@
 
 ## 3.5 File Preview (feat-17)
 
-- [ ] Create `frontend/components/files/FilePreview.tsx` modal component
-- [ ] Implement PDF preview using react-pdf or iframe
-- [ ] Implement image preview (jpg, png, gif, webp)
-- [ ] For Drive files, use Google Docs Viewer embed
-- [ ] For GCS files, generate signed URL for preview
-- [ ] Fallback to download button for unsupported types
-- [ ] Test: Preview PDF renders in modal
-- [ ] Test: Preview image displays correctly
-- [ ] Test: Unsupported type offers download
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-17 passing`
+- [x] Create `frontend/components/files/FilePreview.tsx` modal component ✓ Full implementation with Dialog wrapper
+- [x] Implement PDF preview using react-pdf or iframe ✓ Using iframe for PDF rendering
+- [x] Implement image preview (jpg, png, gif, webp) ✓ Native img tag with object-fit
+- [x] For Drive files, use Google Docs Viewer embed ✓ drive.google.com/file/d/{id}/preview
+- [x] For GCS files, generate signed URL for preview ✓ Using filesApi.getDownloadUrl()
+- [x] Fallback to download button for unsupported types ✓ Shows "Preview not available" with download option
+- [x] Test: Preview PDF renders in modal ✓ test_renders_pdf_in_modal_with_iframe
+- [x] Test: Preview image displays correctly ✓ test_renders_image_preview_correctly
+- [x] Test: Unsupported type offers download ✓ test_shows_fallback_message_for_unsupported_file_types
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-17 passing` ✓
+
+**Note:** Implementation complete. Also created/updated:
+- `frontend/components/files/FilePreview.tsx` - Full preview modal with PDF, image, Drive file support
+- `frontend/components/files/FileList.tsx` - Added preview button and FilePreview integration
+- `frontend/components/files/index.ts` - Exported FilePreview component
+- `frontend/__tests__/files/FilePreview.test.tsx` - 10 tests covering all preview scenarios:
+  - test_renders_pdf_in_modal_with_iframe
+  - test_renders_image_preview_correctly
+  - test_renders_drive_file_with_google_drive_preview_url
+  - test_shows_fallback_message_for_unsupported_file_types
+  - test_provides_download_button
+  - test_calls_download_api_when_download_button_clicked
+  - test_shows_error_message_when_preview_fails_to_load
+  - test_displays_file_size_in_description
+  - test_renders_nothing_when_file_is_null
+  - test_closes_modal_when_open_changes_to_false
 
 ## 3.6 File Permissions (feat-18)
 
