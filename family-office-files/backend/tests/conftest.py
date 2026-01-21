@@ -17,9 +17,10 @@ from app.models.user import User, UserRole
 
 # Use test database (same PostgreSQL but different schema for isolation)
 # The test database URL comes from environment or defaults to the Docker database
+# Inside Docker container, use 'db' host; outside use 'localhost:5433'
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://fop_user:fop_password@localhost:5433/fop_db"
+    os.getenv("DATABASE_URL", "postgresql://fop_user:fop_password@db:5432/fop_db")
 )
 
 engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
