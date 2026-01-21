@@ -13,7 +13,7 @@
 - [x] Create `backend/Dockerfile` with Python 3.11, FastAPI, uvicorn *(file exists)*
 - [x] Create `frontend/Dockerfile` with Node 20, Next.js dev server *(file exists)*
 - [x] Create `.env.example` with all required environment variables *(file exists with DB, JWT, Google, Anthropic vars)*
-- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:48 UTC: Docker CLI still unresponsive. Verified: Docker socket at /var/run/docker.sock symlinked to ~/.docker/run/docker.sock, Docker Desktop processes running (com.docker.backend, Docker Desktop Helper, etc.), but `docker version` command hangs indefinitely. **User action required**: 1) Quit Docker Desktop via menu bar icon → "Quit Docker Desktop", 2) Wait 10 seconds, 3) Restart Docker Desktop, 4) Wait for "Docker Desktop is running" status, 5) Re-run Maestro task.)*
+- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:52 UTC: Docker CLI still frozen. Found hung processes: `docker info` (PID 99055) and `docker version` (PID 98962) from prior attempts. Docker Desktop UI processes running but CLI socket communication broken. **User action required**: 1) Quit Docker Desktop completely via menu bar icon → "Quit Docker Desktop", 2) If needed, `killall Docker` or force quit via Activity Monitor, 3) Wait 15 seconds for cleanup, 4) Restart Docker Desktop from Applications, 5) Wait for green "running" status in menu bar, 6) Re-run this Maestro task.)*
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing`
 
 ## 1.2 Database Schema (feat-35)
