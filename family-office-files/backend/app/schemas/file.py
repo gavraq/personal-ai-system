@@ -76,3 +76,35 @@ class FileDownloadResponse(BaseModel):
     name: str
     download_url: str
     expires_in_minutes: int = 60
+
+
+class FilePermissionEnum(str, Enum):
+    """File permission type"""
+    VIEW = "view"
+    EDIT = "edit"
+
+
+class ShareFileRequest(BaseModel):
+    """Request to share a file with another user"""
+    user_id: UUID = Field(..., description="ID of the user to share with")
+    permission: FilePermissionEnum = Field(
+        default=FilePermissionEnum.VIEW,
+        description="Permission level to grant (view or edit)"
+    )
+
+
+class FileShareResponse(BaseModel):
+    """Response model for a file share"""
+    file_id: UUID
+    shared_with: UUID
+    permission: FilePermissionEnum
+    shared_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ShareFileResponse(BaseModel):
+    """Response model for sharing a file"""
+    message: str
+    share: FileShareResponse

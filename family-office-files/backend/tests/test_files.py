@@ -1074,3 +1074,411 @@ class TestDownloadFile:
 
         # Clean up
         del client.app.dependency_overrides[get_storage_service]
+
+
+class TestDeleteFile:
+    """Tests for feat-18: Delete file (admin only)"""
+
+    def test_admin_can_delete_file(self, client, test_db, mocker):
+        """Admin can delete a file"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        mock_storage.delete_file.return_value = True
+
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        # Create a file
+        file = File(
+            deal_id=deal.id,
+            name="deleteme.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/deleteme.pdf",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "admin@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 204
+
+        # Verify file is deleted
+        deleted_file = db.query(File).filter(File.id == file.id).first()
+        assert deleted_file is None
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_partner_cannot_delete_file(self, client, test_db, mocker):
+        """Partner cannot delete a file (403)"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        partner = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, partner)
+
+        # Create a file
+        file = File(
+            deal_id=deal.id,
+            name="protected.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/protected.pdf",
+            uploaded_by=partner.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "Only admins can delete files" in response.json()["detail"]
+
+        # Verify file still exists
+        existing_file = db.query(File).filter(File.id == file.id).first()
+        assert existing_file is not None
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_viewer_cannot_delete_file(self, client, test_db, mocker):
+        """Viewer cannot delete a file (403)"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        viewer = create_test_user(db, "viewer@test.com", "viewer")
+        member = DealMember(deal_id=deal.id, user_id=viewer.id)
+        db.add(member)
+
+        # Create a file
+        file = File(
+            deal_id=deal.id,
+            name="restricted.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_123",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "viewer@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "Only admins can delete files" in response.json()["detail"]
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_delete_file_not_found(self, client, test_db, mocker):
+        """Delete nonexistent file returns 404"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+        import uuid
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        token = login_user(client, "admin@test.com")
+
+        fake_file_id = str(uuid.uuid4())
+        response = client.delete(
+            f"/api/files/{fake_file_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 404
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_delete_file_non_member_forbidden(self, client, test_db, mocker):
+        """Non-member cannot delete file even as admin role"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        # Create a deal owned by one admin
+        owner = create_test_user(db, "owner@test.com", "admin")
+        deal = create_test_deal(db, owner)
+
+        # Create a file
+        file = File(
+            deal_id=deal.id,
+            name="private.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/private.pdf",
+            uploaded_by=owner.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Create another admin who is not a member of the deal
+        # Note: admins can access any deal by default
+        other_admin = create_test_user(db, "other-admin@test.com", "admin")
+        token = login_user(client, "other-admin@test.com")
+
+        # This should succeed because admins can access any deal
+        response = client.delete(
+            f"/api/files/{file.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Admin should be able to delete
+        assert response.status_code == 204
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+
+class TestShareFile:
+    """Tests for feat-18: Share file (admin only)"""
+
+    def test_admin_can_share_file(self, client, test_db):
+        """Admin can share a file with another user"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        # Create target user to share with
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        # Create a file
+        file = File(
+            deal_id=deal.id,
+            name="shareable.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_share",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "admin@test.com")
+
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": str(target_user.id), "permission": "view"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["message"] == "File shared successfully"
+        assert data["share"]["file_id"] == str(file.id)
+        assert data["share"]["shared_with"] == str(target_user.id)
+        assert data["share"]["permission"] == "view"
+
+    def test_partner_cannot_share_file(self, client, test_db):
+        """Partner cannot share a file (403)"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        partner = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, partner)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="noshare.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_noshare",
+            uploaded_by=partner.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": str(target_user.id), "permission": "view"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "Only admins can share files" in response.json()["detail"]
+
+    def test_viewer_cannot_share_file(self, client, test_db):
+        """Viewer cannot share a file (403)"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        viewer = create_test_user(db, "viewer@test.com", "viewer")
+        member = DealMember(deal_id=deal.id, user_id=viewer.id)
+        db.add(member)
+
+        target_user = create_test_user(db, "target@test.com", "partner")
+
+        file = File(
+            deal_id=deal.id,
+            name="viewonly.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_viewonly",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "viewer@test.com")
+
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": str(target_user.id), "permission": "view"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "Only admins can share files" in response.json()["detail"]
+
+    def test_share_file_target_user_not_found(self, client, test_db):
+        """Share with nonexistent user returns 404"""
+        from app.core.database import get_db
+        import uuid
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        file = File(
+            deal_id=deal.id,
+            name="shareable.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_share",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "admin@test.com")
+
+        fake_user_id = str(uuid.uuid4())
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": fake_user_id, "permission": "view"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 404
+        assert "Target user not found" in response.json()["detail"]
+
+    def test_share_file_updates_existing_permission(self, client, test_db):
+        """Sharing with same user updates permission"""
+        from app.core.database import get_db
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="updateshare.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_update",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Create initial share with VIEW permission
+        share = FileShare(
+            file_id=file.id,
+            shared_with=target_user.id,
+            permission=FilePermission.VIEW
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "admin@test.com")
+
+        # Update to EDIT permission
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": str(target_user.id), "permission": "edit"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["share"]["permission"] == "edit"
+
+        # Verify only one share record exists
+        shares = db.query(FileShare).filter(
+            FileShare.file_id == file.id,
+            FileShare.shared_with == target_user.id
+        ).all()
+        assert len(shares) == 1
+        assert shares[0].permission == FilePermission.EDIT

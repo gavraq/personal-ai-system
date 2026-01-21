@@ -133,19 +133,37 @@
 
 ## 3.6 File Permissions (feat-18)
 
-- [ ] Enforce role-based access on file operations:
-  - Viewer: view, download only
-  - Partner: view, download, upload
-  - Admin: full control including delete
-- [ ] Implement DELETE `/api/files/{file_id}` (admin only)
-- [ ] Implement POST `/api/files/{file_id}/share` for cross-FO sharing
-- [ ] Create file_shares table entries for explicit grants
-- [ ] Hide upload button for Viewers in UI
-- [ ] Hide delete button for non-Admins in UI
-- [ ] Test: Viewer cannot upload (403 API, hidden UI)
-- [ ] Test: Partner can upload
-- [ ] Test: Admin can delete
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-18 passing`
+- [x] Enforce role-based access on file operations: ✓
+  - Viewer: view, download only ✓ can_upload_files checks role
+  - Partner: view, download, upload ✓ can_upload_files allows partner
+  - Admin: full control including delete ✓ can_delete_files admin only
+- [x] Implement DELETE `/api/files/{file_id}` (admin only) ✓ delete_file endpoint in files.py
+- [x] Implement POST `/api/files/{file_id}/share` for cross-FO sharing ✓ share_file endpoint
+- [x] Create file_shares table entries for explicit grants ✓ FileShare model used in share endpoint
+- [x] Hide upload button for Viewers in UI ✓ DrivePicker hidden when user.role === 'viewer'
+- [x] Hide delete button for non-Admins in UI ✓ FileList.tsx shows delete only when canDelete (admin)
+- [x] Test: Viewer cannot upload (403 API, hidden UI) ✓ test_viewer_cannot_upload, test_viewer_cannot_delete_file
+- [x] Test: Partner can upload ✓ existing link_drive_file and upload tests cover this
+- [x] Test: Admin can delete ✓ test_admin_can_delete_file
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-18 passing` ✓
+
+**Note:** Implementation complete. Created/updated:
+- `backend/app/routers/files.py` - Added can_delete_files helper, DELETE endpoint, POST share endpoint
+- `backend/app/schemas/file.py` - Added ShareFileRequest, ShareFileResponse, FileShareResponse, FilePermissionEnum
+- `backend/app/models/file.py` - FileShare model already exists
+- `frontend/components/files/FileList.tsx` - Added delete button (admin only), uses useAuthStore for role check
+- `frontend/lib/api.ts` - Added filesApi.delete() and filesApi.share() methods
+- `backend/tests/test_files.py` - Added TestDeleteFile (5 tests) and TestShareFile (5 tests):
+  - test_admin_can_delete_file
+  - test_partner_cannot_delete_file
+  - test_viewer_cannot_delete_file
+  - test_delete_file_not_found
+  - test_delete_file_non_member_forbidden
+  - test_admin_can_share_file
+  - test_partner_cannot_share_file
+  - test_viewer_cannot_share_file
+  - test_share_file_target_user_not_found
+  - test_share_file_updates_existing_permission
 
 ## Phase 3 Completion
 

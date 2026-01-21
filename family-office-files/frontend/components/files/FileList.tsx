@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { filesApi, DealFile, FileSource, FileSortBy, SortOrder, FileListOptions } from '@/lib/api'
+import { useAuthStore } from '@/lib/auth'
 import { FilePreview } from './FilePreview'
 
 // Icons
@@ -54,10 +55,20 @@ const EyeIcon = () => (
   </svg>
 )
 
+const TrashIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+)
+
 interface FileListProps {
   dealId: string
   onFileCountChange?: (count: number) => void
   refreshTrigger?: number
+  userRole?: string  // Current user's role for the deal (admin, partner, viewer)
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -88,10 +99,20 @@ function getFileTypeLabel(mimeType: string | null): string {
   return 'File'
 }
 
-export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileListProps) {
+export function FileList({ dealId, onFileCountChange, refreshTrigger, userRole }: FileListProps) {
   const [files, setFiles] = useState<DealFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null)
+
+  // Get current user from auth store as fallback
+  const { user } = useAuthStore()
+
+  // Use provided userRole or fall back to user's global role
+  const effectiveRole = userRole || user?.role || 'viewer'
+
+  // Permission checks
+  const canDelete = effectiveRole === 'admin'
 
   // Filter and sort state
   const [search, setSearch] = useState('')
@@ -154,6 +175,24 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
   const handlePreview = (file: DealFile) => {
     setPreviewFile(file)
     setPreviewOpen(true)
+  }
+
+  const handleDelete = async (file: DealFile) => {
+    if (!confirm(`Are you sure you want to delete "${file.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setDeletingFileId(file.id)
+    try {
+      await filesApi.delete(file.id)
+      // Reload files after deletion
+      loadFiles()
+    } catch (err) {
+      console.error('Error deleting file:', err)
+      setError('Failed to delete file')
+    } finally {
+      setDeletingFileId(null)
+    }
   }
 
   const toggleSortOrder = () => {
@@ -303,6 +342,18 @@ export function FileList({ dealId, onFileCountChange, refreshTrigger }: FileList
                 >
                   <DownloadIcon />
                 </Button>
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(file)}
+                    title="Delete"
+                    disabled={deletingFileId === file.id}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <TrashIcon />
+                  </Button>
+                )}
               </div>
             </li>
           ))}

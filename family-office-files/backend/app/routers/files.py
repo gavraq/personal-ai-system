@@ -12,7 +12,7 @@ from ..core.deps import get_current_user
 from ..core.storage import get_storage_service, StorageService
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
-from ..models.file import File, FileSource
+from ..models.file import File, FileSource, FileShare, FilePermission
 from ..schemas.file import (
     LinkDriveFileRequest,
     LinkDriveFileResponse,
@@ -20,6 +20,9 @@ from ..schemas.file import (
     FileListResponse,
     UploadFileResponse,
     FileDownloadResponse,
+    ShareFileRequest,
+    ShareFileResponse,
+    FileShareResponse,
 )
 
 router = APIRouter(prefix="/api", tags=["files"])
@@ -60,6 +63,12 @@ def can_upload_files(db: Session, deal: Deal, user: User) -> bool:
     """Check if user can upload/link files (partner or admin)"""
     role = get_deal_role(db, deal, user)
     return role in [UserRole.ADMIN.value, UserRole.PARTNER.value]
+
+
+def can_delete_files(db: Session, deal: Deal, user: User) -> bool:
+    """Check if user can delete files (admin only)"""
+    role = get_deal_role(db, deal, user)
+    return role == UserRole.ADMIN.value
 
 
 def can_access_file(db: Session, file: File, user: User) -> bool:
@@ -398,4 +407,154 @@ async def download_file(
         name=file.name,
         download_url=download_url,
         expires_in_minutes=60 if file.source == FileSource.GCS else 0
+    )
+
+
+@router.delete("/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_file(
+    file_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    storage: StorageService = Depends(get_storage_service)
+):
+    """
+    Delete a file.
+
+    Only admins can delete files.
+    For GCS files, the file will also be deleted from storage.
+
+    User must be a member of the deal associated with the file.
+    """
+    # Get the file
+    file = db.query(File).filter(File.id == file_id).first()
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    # Get the deal
+    deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
+    if deal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Associated deal not found"
+        )
+
+    # Check access to deal
+    if not can_access_deal(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this deal"
+        )
+
+    # Check permission to delete files
+    if not can_delete_files(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can delete files"
+        )
+
+    # Delete from GCS if applicable
+    if file.source == FileSource.GCS and file.source_id:
+        try:
+            storage.delete_file(file.source_id)
+        except Exception as e:
+            # Log the error but continue with database deletion
+            # The file record should be removed even if GCS deletion fails
+            print(f"Warning: Failed to delete file from GCS: {e}")
+
+    # Delete the file record
+    db.delete(file)
+    db.commit()
+
+    return None
+
+
+@router.post("/files/{file_id}/share", response_model=ShareFileResponse, status_code=status.HTTP_201_CREATED)
+async def share_file(
+    file_id: UUID,
+    request: ShareFileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Share a file with another user (cross-FO sharing).
+
+    - **user_id**: ID of the user to share the file with
+    - **permission**: Permission level to grant (view or edit)
+
+    Only admins can share files. The target user will be able to access
+    this specific file even if they are not a member of the associated deal.
+    """
+    # Get the file
+    file = db.query(File).filter(File.id == file_id).first()
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    # Get the deal
+    deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
+    if deal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Associated deal not found"
+        )
+
+    # Check access to deal
+    if not can_access_deal(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this deal"
+        )
+
+    # Only admins can share files
+    role = get_deal_role(db, deal, current_user)
+    if role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can share files"
+        )
+
+    # Check if target user exists
+    target_user = db.query(User).filter(User.id == request.user_id).first()
+    if target_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target user not found"
+        )
+
+    # Check if share already exists
+    existing_share = db.query(FileShare).filter(
+        FileShare.file_id == file_id,
+        FileShare.shared_with == request.user_id
+    ).first()
+
+    if existing_share:
+        # Update existing share with new permission
+        existing_share.permission = FilePermission(request.permission.value)
+        db.commit()
+        db.refresh(existing_share)
+        share = existing_share
+    else:
+        # Create new file share
+        share = FileShare(
+            file_id=file_id,
+            shared_with=request.user_id,
+            permission=FilePermission(request.permission.value)
+        )
+        db.add(share)
+        db.commit()
+        db.refresh(share)
+
+    return ShareFileResponse(
+        message="File shared successfully",
+        share=FileShareResponse(
+            file_id=share.file_id,
+            shared_with=share.shared_with,
+            permission=share.permission,
+            shared_at=share.shared_at
+        )
     )

@@ -268,6 +268,25 @@ export interface FileDownloadResponse {
   expires_in_minutes: number
 }
 
+export type FilePermission = 'view' | 'edit'
+
+export interface ShareFileRequest {
+  user_id: string
+  permission: FilePermission
+}
+
+export interface FileShareInfo {
+  file_id: string
+  shared_with: string
+  permission: FilePermission
+  shared_at: string
+}
+
+export interface ShareFileResponse {
+  message: string
+  share: FileShareInfo
+}
+
 // File list options
 export type FileSortBy = 'name' | 'date' | 'type'
 export type SortOrder = 'asc' | 'desc'
@@ -309,6 +328,15 @@ export const filesApi = {
 
   getDownloadUrl: async (fileId: string): Promise<FileDownloadResponse> => {
     const response = await api.get<FileDownloadResponse>(`/api/files/${fileId}/download`)
+    return response.data
+  },
+
+  delete: async (fileId: string): Promise<void> => {
+    await api.delete(`/api/files/${fileId}`)
+  },
+
+  share: async (fileId: string, data: ShareFileRequest): Promise<ShareFileResponse> => {
+    const response = await api.post<ShareFileResponse>(`/api/files/${fileId}/share`, data)
     return response.data
   },
 }
