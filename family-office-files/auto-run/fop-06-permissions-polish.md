@@ -33,15 +33,15 @@
 
 ## 6.3 File-Level Permissions (feat-21)
 
-- [ ] Implement file_shares table for cross-FO sharing
-- [ ] Implement POST `/api/files/{file_id}/share` - share with user
-- [ ] Implement DELETE `/api/files/{file_id}/share/{user_id}` - revoke share
-- [ ] Check file_shares before allowing file access
-- [ ] Share permission levels: view, download, edit
-- [ ] Test: Share file with external user grants access
-- [ ] Test: Revoke share removes access
-- [ ] Test: Shared files visible in recipient's file list
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-21 passing`
+- [x] Implement file_shares table for cross-FO sharing ✓ FileShare model already exists in models/file.py
+- [x] Implement POST `/api/files/{file_id}/share` - share with user ✓ Already implemented in routers/files.py
+- [x] Implement DELETE `/api/files/{file_id}/share/{user_id}` - revoke share ✓ Added revoke_file_share endpoint
+- [x] Check file_shares before allowing file access ✓ Updated can_access_file() and added can_download_file()
+- [x] Share permission levels: view, download, edit ✓ Added DOWNLOAD permission to FilePermission enum
+- [x] Test: Share file with external user grants access ✓ TestSharedFilesAccess::test_shared_file_grants_download_access
+- [x] Test: Revoke share removes access ✓ TestSharedFilesAccess::test_revoke_share_removes_access
+- [x] Test: Shared files visible in recipient's file list ✓ TestListSharedFiles::test_list_shared_files_returns_shared_files + GET /api/files/shared endpoint
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-21 passing` ✓
 
 ## 6.4 Permission Audit Log (feat-22)
 

@@ -23,6 +23,8 @@ from ..schemas.file import (
     ShareFileRequest,
     ShareFileResponse,
     FileShareResponse,
+    SharedFileResponse,
+    SharedFileListResponse,
 )
 from .activity import log_activity
 
@@ -73,11 +75,53 @@ def can_delete_files(db: Session, deal: Deal, user: User) -> bool:
 
 
 def can_access_file(db: Session, file: File, user: User) -> bool:
-    """Check if user can access a file (member of associated deal or admin)"""
+    """Check if user can access a file (member of associated deal, admin, or shared with user)"""
+    # Admin can access all files
+    if user.role == UserRole.ADMIN.value:
+        return True
+
+    # Check if user has a direct file share
+    share = db.query(FileShare).filter(
+        FileShare.file_id == file.id,
+        FileShare.shared_with == user.id
+    ).first()
+    if share is not None:
+        return True
+
+    # Check if user is a member of the associated deal
     deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
     if deal is None:
         return False
     return can_access_deal(db, deal, user)
+
+
+def can_download_file(db: Session, file: File, user: User) -> bool:
+    """Check if user can download a file.
+
+    Requires:
+    - Admin role, OR
+    - Deal membership (any role can download), OR
+    - File share with 'download' or 'edit' permission
+    """
+    # Admin can download all files
+    if user.role == UserRole.ADMIN.value:
+        return True
+
+    # Check if user is a member of the associated deal
+    deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
+    if deal and can_access_deal(db, deal, user):
+        return True
+
+    # Check if user has a file share with download or edit permission
+    share = db.query(FileShare).filter(
+        FileShare.file_id == file.id,
+        FileShare.shared_with == user.id
+    ).first()
+    if share is not None:
+        # VIEW permission doesn't allow download, DOWNLOAD and EDIT do
+        return share.permission in [FilePermission.DOWNLOAD, FilePermission.EDIT]
+
+    return False
 
 
 @router.post("/deals/{deal_id}/files/link", response_model=LinkDriveFileResponse, status_code=status.HTTP_201_CREATED)
@@ -380,7 +424,8 @@ async def download_file(
     For GCS files, returns a signed URL valid for 60 minutes.
     For Drive files, returns the Google Drive file URL.
 
-    User must be a member of the deal associated with the file.
+    User must be a member of the deal associated with the file,
+    or have a file share with 'download' or 'edit' permission.
     """
     # Get the file
     file = db.query(File).filter(File.id == file_id).first()
@@ -390,11 +435,11 @@ async def download_file(
             detail="File not found"
         )
 
-    # Check access
-    if not can_access_file(db, file, current_user):
+    # Check download permission (stricter than access)
+    if not can_download_file(db, file, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this file"
+            detail="You do not have permission to download this file"
         )
 
     # Generate download URL based on source
@@ -588,4 +633,110 @@ async def share_file(
             permission=share.permission,
             shared_at=share.shared_at
         )
+    )
+
+
+@router.delete("/files/{file_id}/share/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_file_share(
+    file_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Revoke a file share (cross-FO sharing).
+
+    - **file_id**: ID of the file
+    - **user_id**: ID of the user to revoke access from
+
+    Only admins can revoke file shares.
+    """
+    # Get the file
+    file = db.query(File).filter(File.id == file_id).first()
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    # Get the deal
+    deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
+    if deal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Associated deal not found"
+        )
+
+    # Check access to deal
+    if not can_access_deal(db, deal, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this deal"
+        )
+
+    # Only admins can revoke file shares
+    role = get_deal_role(db, deal, current_user)
+    if role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can revoke file shares"
+        )
+
+    # Find the share
+    share = db.query(FileShare).filter(
+        FileShare.file_id == file_id,
+        FileShare.shared_with == user_id
+    ).first()
+
+    if share is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File share not found"
+        )
+
+    # Delete the share
+    db.delete(share)
+    db.commit()
+
+    return None
+
+
+@router.get("/files/shared", response_model=SharedFileListResponse)
+async def list_shared_files(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all files shared with the current user.
+
+    Returns files that have been explicitly shared with the user via file shares,
+    along with the permission level granted.
+    """
+    # Get all file shares for the current user
+    shares = db.query(FileShare).filter(
+        FileShare.shared_with == current_user.id
+    ).all()
+
+    # Build response with file details and share info
+    shared_files = []
+    for share in shares:
+        file = db.query(File).filter(File.id == share.file_id).first()
+        if file:
+            shared_files.append(SharedFileResponse(
+                id=file.id,
+                deal_id=file.deal_id,
+                name=file.name,
+                source=file.source.value,
+                source_id=file.source_id,
+                mime_type=file.mime_type,
+                size_bytes=file.size_bytes,
+                uploaded_by=file.uploaded_by,
+                created_at=file.created_at,
+                permission=share.permission.value,
+                shared_at=share.shared_at
+            ))
+
+    return SharedFileListResponse(
+        files=shared_files,
+        total=len(shared_files)
     )

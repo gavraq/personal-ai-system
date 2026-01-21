@@ -79,8 +79,15 @@ class FileDownloadResponse(BaseModel):
 
 
 class FilePermissionEnum(str, Enum):
-    """File permission type"""
+    """File permission type
+
+    Permission hierarchy: VIEW < DOWNLOAD < EDIT
+    - VIEW: Can see file metadata in shared files list
+    - DOWNLOAD: Can view and download the file
+    - EDIT: Can view, download, and edit the file
+    """
     VIEW = "view"
+    DOWNLOAD = "download"
     EDIT = "edit"
 
 
@@ -108,3 +115,27 @@ class ShareFileResponse(BaseModel):
     """Response model for sharing a file"""
     message: str
     share: FileShareResponse
+
+
+class SharedFileResponse(BaseModel):
+    """Response model for a file shared with the current user"""
+    id: UUID
+    deal_id: UUID
+    name: str
+    source: FileSourceEnum
+    source_id: Optional[str] = None
+    mime_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    uploaded_by: UUID
+    created_at: datetime
+    permission: FilePermissionEnum
+    shared_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SharedFileListResponse(BaseModel):
+    """Response model for list of files shared with current user"""
+    files: List[SharedFileResponse]
+    total: int

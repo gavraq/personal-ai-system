@@ -18,8 +18,15 @@ class FileSource(str, enum.Enum):
 
 
 class FilePermission(str, enum.Enum):
-    """File permission enumeration"""
+    """File permission enumeration
+
+    Permission hierarchy: VIEW < DOWNLOAD < EDIT
+    - VIEW: Can see file metadata in shared files list
+    - DOWNLOAD: Can view and download the file
+    - EDIT: Can view, download, and edit the file
+    """
     VIEW = "view"
+    DOWNLOAD = "download"
     EDIT = "edit"
 
 

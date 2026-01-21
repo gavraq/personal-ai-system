@@ -1482,3 +1482,496 @@ class TestShareFile:
         ).all()
         assert len(shares) == 1
         assert shares[0].permission == FilePermission.EDIT
+
+    def test_share_file_with_download_permission(self, client, test_db):
+        """Admin can share a file with download permission"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="downloadable.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_dl",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "admin@test.com")
+
+        response = client.post(
+            f"/api/files/{file.id}/share",
+            json={"user_id": str(target_user.id), "permission": "download"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["share"]["permission"] == "download"
+
+
+class TestRevokeFileShare:
+    """Tests for feat-21: Revoke file share"""
+
+    def test_admin_can_revoke_file_share(self, client, test_db):
+        """Admin can revoke a file share"""
+        from app.core.database import get_db
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="revokable.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_revoke",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Create a share
+        share = FileShare(
+            file_id=file.id,
+            shared_with=target_user.id,
+            permission=FilePermission.VIEW
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "admin@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}/share/{target_user.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 204
+
+        # Verify share is deleted
+        deleted_share = db.query(FileShare).filter(
+            FileShare.file_id == file.id,
+            FileShare.shared_with == target_user.id
+        ).first()
+        assert deleted_share is None
+
+    def test_partner_cannot_revoke_file_share(self, client, test_db):
+        """Partner cannot revoke a file share (403)"""
+        from app.core.database import get_db
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        partner = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, partner)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="norevoke.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_norevoke",
+            uploaded_by=partner.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        share = FileShare(
+            file_id=file.id,
+            shared_with=target_user.id,
+            permission=FilePermission.VIEW
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}/share/{target_user.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "Only admins can revoke file shares" in response.json()["detail"]
+
+    def test_revoke_nonexistent_share_returns_404(self, client, test_db):
+        """Revoking a nonexistent share returns 404"""
+        from app.core.database import get_db
+        import uuid
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        target_user = create_test_user(db, "target@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="noshare.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_noshare",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        token = login_user(client, "admin@test.com")
+
+        response = client.delete(
+            f"/api/files/{file.id}/share/{target_user.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 404
+        assert "File share not found" in response.json()["detail"]
+
+
+class TestSharedFilesAccess:
+    """Tests for feat-21: Shared files access via file_shares"""
+
+    def test_shared_file_grants_download_access(self, client, test_db, mocker):
+        """User with download share permission can download the file"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        mock_storage.generate_signed_url.return_value = "https://storage.googleapis.com/signed-url"
+
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        # Create a user NOT a member of the deal
+        external_user = create_test_user(db, "external@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="shared.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/shared.pdf",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Share file with external user with DOWNLOAD permission
+        share = FileShare(
+            file_id=file.id,
+            shared_with=external_user.id,
+            permission=FilePermission.DOWNLOAD
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "external@test.com")
+
+        # External user should be able to download
+        response = client.get(
+            f"/api/files/{file.id}/download",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "shared.pdf"
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_view_share_does_not_grant_download_access(self, client, test_db, mocker):
+        """User with VIEW share permission cannot download the file"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        # Create a user NOT a member of the deal
+        external_user = create_test_user(db, "external@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="viewonly.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/viewonly.pdf",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Share file with external user with VIEW permission only
+        share = FileShare(
+            file_id=file.id,
+            shared_with=external_user.id,
+            permission=FilePermission.VIEW
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "external@test.com")
+
+        # External user should NOT be able to download (VIEW only)
+        response = client.get(
+            f"/api/files/{file.id}/download",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 403
+        assert "permission to download" in response.json()["detail"]
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_edit_share_grants_download_access(self, client, test_db, mocker):
+        """User with EDIT share permission can download the file"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        mock_storage.generate_signed_url.return_value = "https://storage.googleapis.com/signed-url"
+
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        external_user = create_test_user(db, "external@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="editable.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/editable.pdf",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Share file with EDIT permission
+        share = FileShare(
+            file_id=file.id,
+            shared_with=external_user.id,
+            permission=FilePermission.EDIT
+        )
+        db.add(share)
+        db.commit()
+
+        token = login_user(client, "external@test.com")
+
+        response = client.get(
+            f"/api/files/{file.id}/download",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+    def test_revoke_share_removes_access(self, client, test_db, mocker):
+        """After revoking share, user can no longer access the file"""
+        from app.core.database import get_db
+        from app.core.storage import StorageService
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Mock storage service
+        mock_storage = mocker.MagicMock(spec=StorageService)
+        mock_storage.generate_signed_url.return_value = "https://storage.googleapis.com/signed-url"
+
+        from app.core.storage import get_storage_service
+        client.app.dependency_overrides[get_storage_service] = lambda: mock_storage
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        external_user = create_test_user(db, "external@test.com", "viewer")
+
+        file = File(
+            deal_id=deal.id,
+            name="revokable.pdf",
+            source=FileSource.GCS,
+            source_id="deals/deal-id/file-id/revokable.pdf",
+            uploaded_by=admin.id
+        )
+        db.add(file)
+        db.commit()
+        db.refresh(file)
+
+        # Share file with DOWNLOAD permission
+        share = FileShare(
+            file_id=file.id,
+            shared_with=external_user.id,
+            permission=FilePermission.DOWNLOAD
+        )
+        db.add(share)
+        db.commit()
+
+        external_token = login_user(client, "external@test.com")
+        admin_token = login_user(client, "admin@test.com")
+
+        # External user can download
+        response = client.get(
+            f"/api/files/{file.id}/download",
+            headers={"Authorization": f"Bearer {external_token}"}
+        )
+        assert response.status_code == 200
+
+        # Admin revokes the share
+        revoke_response = client.delete(
+            f"/api/files/{file.id}/share/{external_user.id}",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert revoke_response.status_code == 204
+
+        # External user can no longer download
+        response = client.get(
+            f"/api/files/{file.id}/download",
+            headers={"Authorization": f"Bearer {external_token}"}
+        )
+        assert response.status_code == 403
+
+        # Clean up
+        del client.app.dependency_overrides[get_storage_service]
+
+
+class TestListSharedFiles:
+    """Tests for feat-21: List files shared with current user"""
+
+    def test_list_shared_files_returns_shared_files(self, client, test_db):
+        """List shared files returns files shared with current user"""
+        from app.core.database import get_db
+        from app.models.file import FileShare, FilePermission
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        admin = create_test_user(db, "admin@test.com", "admin")
+        deal = create_test_deal(db, admin)
+
+        recipient = create_test_user(db, "recipient@test.com", "viewer")
+
+        # Create files
+        file1 = File(
+            deal_id=deal.id,
+            name="shared1.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=admin.id
+        )
+        file2 = File(
+            deal_id=deal.id,
+            name="shared2.pdf",
+            source=FileSource.GCS,
+            source_id="gcs/path/shared2.pdf",
+            uploaded_by=admin.id
+        )
+        file3 = File(
+            deal_id=deal.id,
+            name="notshared.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_3",
+            uploaded_by=admin.id
+        )
+        db.add_all([file1, file2, file3])
+        db.commit()
+        db.refresh(file1)
+        db.refresh(file2)
+        db.refresh(file3)
+
+        # Share file1 and file2 with recipient
+        share1 = FileShare(
+            file_id=file1.id,
+            shared_with=recipient.id,
+            permission=FilePermission.VIEW
+        )
+        share2 = FileShare(
+            file_id=file2.id,
+            shared_with=recipient.id,
+            permission=FilePermission.DOWNLOAD
+        )
+        db.add_all([share1, share2])
+        db.commit()
+
+        token = login_user(client, "recipient@test.com")
+
+        response = client.get(
+            "/api/files/shared",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+
+        names = [f["name"] for f in data["files"]]
+        assert "shared1.pdf" in names
+        assert "shared2.pdf" in names
+        assert "notshared.pdf" not in names
+
+        # Check permission is included
+        for f in data["files"]:
+            if f["name"] == "shared1.pdf":
+                assert f["permission"] == "view"
+            elif f["name"] == "shared2.pdf":
+                assert f["permission"] == "download"
+
+    def test_list_shared_files_empty_when_no_shares(self, client, test_db):
+        """List shared files returns empty when user has no shares"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "noshares@test.com", "viewer")
+
+        token = login_user(client, "noshares@test.com")
+
+        response = client.get(
+            "/api/files/shared",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["files"] == []
