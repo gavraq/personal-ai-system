@@ -167,10 +167,12 @@
 
 ## Phase 3 Completion
 
-- [ ] All 6 features (feat-13 through feat-18) marked as passing
-- [ ] Can connect Google Drive and link files
-- [ ] Can upload files directly to platform
-- [ ] Unified file listing working
-- [ ] File preview functional
-- [ ] Permissions enforced
-- [ ] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm
+- [x] All 6 features (feat-13 through feat-18) marked as passing ✓ Verified via feature registry
+- [x] Can connect Google Drive and link files ✓ feat-13, feat-14 implementing OAuth and DrivePicker
+- [x] Can upload files directly to platform ✓ feat-15 with GCS storage and drag-drop UI
+- [x] Unified file listing working ✓ feat-16 with sort/filter/search
+- [x] File preview functional ✓ feat-17 with PDF, image, and Drive file support (10 passing frontend tests)
+- [x] Permissions enforced ✓ feat-18 with role-based access control
+- [x] Run `bun .claude/skills/CORE/Tools/FeatureRegistry.ts verify family-office-files` to confirm ✓ All 6 Phase 3 features (feat-13 through feat-18) showing as passing
+
+**Phase 3 Complete** - All file repository features implemented and verified. Ready for Phase 4.
