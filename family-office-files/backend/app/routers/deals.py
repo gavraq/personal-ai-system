@@ -11,6 +11,14 @@ from sqlalchemy import func
 
 from ..core.database import get_db
 from ..core.deps import get_current_user, require_role
+from ..core.permissions import (
+    can_read_deal,
+    can_write_deal,
+    can_create_deal,
+    can_manage_deal_members,
+    require_deal_read_access,
+    require_deal_write_access,
+)
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
 from ..models.file import File
@@ -38,15 +46,8 @@ def is_deal_member(db: Session, deal_id: UUID, user_id: UUID) -> bool:
 
 
 def can_access_deal(db: Session, deal: Deal, user: User) -> bool:
-    """Check if user can access the deal (admin or member)"""
-    if user.role == UserRole.ADMIN.value:
-        return True
-    return is_deal_member(db, deal.id, user.id)
-
-
-def can_create_deal(user: User) -> bool:
-    """Check if user can create deals (admin or partner only)"""
-    return user.role in [UserRole.ADMIN.value, UserRole.PARTNER.value]
+    """Check if user can access the deal (admin or member) - for read operations"""
+    return can_read_deal(db, deal, user)
 
 
 def get_deal_file_count(db: Session, deal_id: UUID) -> int:
@@ -211,7 +212,8 @@ async def update_deal(
     - **description**: New description (optional)
     - **status**: New status (optional, must follow draft→active→closed workflow)
 
-    User must be a deal member or admin.
+    User must be a deal member with partner or admin role.
+    Viewers cannot modify deals.
     Closed deals cannot be edited.
     """
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -221,11 +223,11 @@ async def update_deal(
             detail="Deal not found"
         )
 
-    if not can_access_deal(db, deal, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this deal"
-        )
+    # Check read access first
+    require_deal_read_access(db, deal, current_user)
+
+    # Check write access (partner+ required)
+    require_deal_write_access(db, deal, current_user)
 
     # Check if deal is closed (read-only)
     if deal.status == 'closed' and request.status != DealStatusEnum.CLOSED:
@@ -313,7 +315,8 @@ async def add_deal_member(
     """
     Add a member to a deal.
 
-    User must be a deal member or admin to add members.
+    User must be a deal member with partner or admin role.
+    Viewers cannot add members.
     """
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if deal is None:
@@ -322,10 +325,14 @@ async def add_deal_member(
             detail="Deal not found"
         )
 
-    if not can_access_deal(db, deal, current_user):
+    # Check read access first
+    require_deal_read_access(db, deal, current_user)
+
+    # Check member management permission (partner+ required)
+    if not can_manage_deal_members(db, deal, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this deal"
+            detail="You do not have permission to manage deal members. Partner or Admin role required."
         )
 
     # Check if deal is closed
@@ -446,7 +453,8 @@ async def remove_deal_member(
     """
     Remove a member from a deal.
 
-    User must be a deal member or admin to remove members.
+    User must be a deal member with partner or admin role.
+    Viewers cannot remove members.
     Cannot remove the deal creator.
     """
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -456,10 +464,14 @@ async def remove_deal_member(
             detail="Deal not found"
         )
 
-    if not can_access_deal(db, deal, current_user):
+    # Check read access first
+    require_deal_read_access(db, deal, current_user)
+
+    # Check member management permission (partner+ required)
+    if not can_manage_deal_members(db, deal, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this deal"
+            detail="You do not have permission to manage deal members. Partner or Admin role required."
         )
 
     # Check if deal is closed

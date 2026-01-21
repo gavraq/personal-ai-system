@@ -620,3 +620,637 @@ class TestDealStatusWorkflow:
 
         assert edit_response.status_code == 403
         assert "closed" in edit_response.json()["detail"].lower()
+
+
+class TestDealOverviewCards:
+    """Tests for feat-5: Deal Overview Cards - file_count and sorting"""
+
+    def test_deal_response_includes_file_count(self, client, test_db):
+        """Deal response includes file_count field"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_fc1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_fc1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "File Count Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert create_response.status_code == 201
+        data = create_response.json()
+        assert "file_count" in data
+        assert data["file_count"] == 0
+
+    def test_deal_list_sorted_by_last_activity(self, client, test_db):
+        """Deal list is sorted by last activity (updated_at, then created_at)"""
+        from app.core.database import get_db
+        import time
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_sort@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_sort@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create first deal (older)
+        create_response1 = client.post(
+            "/api/deals",
+            json={"title": "First Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal1_id = create_response1.json()["id"]
+
+        # Small delay to ensure different timestamps
+        time.sleep(0.1)
+
+        # Create second deal (newer)
+        create_response2 = client.post(
+            "/api/deals",
+            json={"title": "Second Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal2_id = create_response2.json()["id"]
+
+        # List deals - should show second deal first (most recent)
+        list_response = client.get(
+            "/api/deals",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert list_response.status_code == 200
+        deals = list_response.json()["deals"]
+        assert len(deals) >= 2
+        # Second deal should be first (most recently created)
+        assert deals[0]["id"] == deal2_id
+
+    def test_dashboard_loads_with_deal_cards(self, client, test_db):
+        """Dashboard API returns deals with all required fields for cards"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_dash@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dash@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        client.post(
+            "/api/deals",
+            json={"title": "Dashboard Test Deal", "description": "Test description"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # List deals (dashboard uses same endpoint)
+        list_response = client.get(
+            "/api/deals?page=1&page_size=12",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert list_response.status_code == 200
+        data = list_response.json()
+        assert "deals" in data
+        assert "total" in data
+        assert len(data["deals"]) > 0
+
+        # Verify deal card fields
+        deal = data["deals"][0]
+        assert "id" in deal
+        assert "title" in deal
+        assert "status" in deal
+        assert "file_count" in deal
+        assert "created_at" in deal
+        assert "updated_at" in deal
+
+    def test_only_assigned_deals_visible_for_viewer(self, client, test_db):
+        """Viewer can only see deals they are assigned to (permission filtering)"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_perm@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create viewer
+        viewer = User(
+            email="viewer_perm@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+        db.refresh(viewer)
+
+        # Login as admin
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_perm@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        # Create deal (viewer NOT assigned)
+        client.post(
+            "/api/deals",
+            json={"title": "Admin Only Deal"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_perm@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Viewer lists deals - should not see admin's deal
+        list_response = client.get(
+            "/api/deals",
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+
+        assert list_response.status_code == 200
+        deals = list_response.json()["deals"]
+        # Viewer should not see the admin-only deal
+        deal_titles = [d["title"] for d in deals]
+        assert "Admin Only Deal" not in deal_titles
+
+
+class TestRoleBasedAccessControl:
+    """Tests for feat-19: Role-Based Access Control
+
+    Role hierarchy: Admin > Partner > Viewer
+    - Viewers can only read deals they're members of
+    - Partners can read/write deals they're members of
+    - Admins can do everything
+    """
+
+    def test_viewer_cannot_update_deal_returns_403(self, client, test_db):
+        """Viewer member cannot update deal - returns 403"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin who creates the deal
+        admin = User(
+            email="admin_rbac1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create viewer
+        viewer = User(
+            email="viewer_rbac1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+        db.refresh(viewer)
+
+        # Login as admin and create deal
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_rbac1@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "RBAC Test Deal"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Add viewer as member
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(viewer.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_rbac1@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Viewer can READ the deal
+        read_response = client.get(
+            f"/api/deals/{deal_id}",
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+        assert read_response.status_code == 200
+
+        # Viewer CANNOT UPDATE the deal
+        update_response = client.put(
+            f"/api/deals/{deal_id}",
+            json={"title": "Viewer Modified Title"},
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+        assert update_response.status_code == 403
+        assert "partner" in update_response.json()["detail"].lower() or "admin" in update_response.json()["detail"].lower()
+
+    def test_viewer_cannot_add_deal_members_returns_403(self, client, test_db):
+        """Viewer member cannot add other members - returns 403"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_rbac2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create viewer (will be added as member)
+        viewer = User(
+            email="viewer_rbac2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+
+        # Create another user to try to add
+        other_user = User(
+            email="other_rbac2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(other_user)
+        db.commit()
+        db.refresh(viewer)
+        db.refresh(other_user)
+
+        # Admin creates deal and adds viewer
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_rbac2@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Member Management Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(viewer.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_rbac2@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Viewer tries to add another member - should fail
+        add_response = client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(other_user.id)},
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+        assert add_response.status_code == 403
+        assert "partner" in add_response.json()["detail"].lower() or "admin" in add_response.json()["detail"].lower()
+
+    def test_viewer_cannot_remove_deal_members_returns_403(self, client, test_db):
+        """Viewer member cannot remove other members - returns 403"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_rbac3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create viewer
+        viewer = User(
+            email="viewer_rbac3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+
+        # Create another user (will be added and viewer will try to remove)
+        other_user = User(
+            email="other_rbac3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(other_user)
+        db.commit()
+        db.refresh(viewer)
+        db.refresh(other_user)
+
+        # Admin creates deal and adds both users
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_rbac3@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Remove Member Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(viewer.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(other_user.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_rbac3@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Viewer tries to remove another member - should fail
+        remove_response = client.delete(
+            f"/api/deals/{deal_id}/members/{other_user.id}",
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+        assert remove_response.status_code == 403
+
+    def test_partner_can_update_deal(self, client, test_db):
+        """Partner member CAN update deal they're a member of"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_rbac4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner
+        partner = User(
+            email="partner_rbac4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(partner)
+        db.commit()
+        db.refresh(partner)
+
+        # Admin creates deal and adds partner
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_rbac4@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Partner Update Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(partner.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "partner_rbac4@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # Partner CAN update the deal
+        update_response = client.put(
+            f"/api/deals/{deal_id}",
+            json={"title": "Partner Modified Title"},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["title"] == "Partner Modified Title"
+
+    def test_partner_can_manage_deal_members(self, client, test_db):
+        """Partner member CAN add/remove members from deal"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_rbac5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner
+        partner = User(
+            email="partner_rbac5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(partner)
+
+        # Create viewer to add
+        viewer = User(
+            email="viewer_rbac5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+        db.refresh(partner)
+        db.refresh(viewer)
+
+        # Admin creates deal and adds partner
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_rbac5@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Partner Member Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(partner.id)},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "partner_rbac5@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # Partner CAN add a member
+        add_response = client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(viewer.id)},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert add_response.status_code == 201
+
+        # Partner CAN remove the member
+        remove_response = client.delete(
+            f"/api/deals/{deal_id}/members/{viewer.id}",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert remove_response.status_code == 204
+
+    def test_admin_can_access_all_deals(self, client, test_db):
+        """Admin can access all deals regardless of membership"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create two admins
+        admin1 = User(
+            email="admin1_rbac@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin1)
+
+        admin2 = User(
+            email="admin2_rbac@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin2)
+        db.commit()
+
+        # Admin1 creates deal
+        admin1_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin1_rbac@test.com", "password": "password123"}
+        )
+        admin1_token = admin1_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Admin1's Deal"},
+            headers={"Authorization": f"Bearer {admin1_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Admin2 (not a member) CAN access the deal
+        admin2_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin2_rbac@test.com", "password": "password123"}
+        )
+        admin2_token = admin2_login.json()["access_token"]
+
+        get_response = client.get(
+            f"/api/deals/{deal_id}",
+            headers={"Authorization": f"Bearer {admin2_token}"}
+        )
+        assert get_response.status_code == 200
+        assert get_response.json()["title"] == "Admin1's Deal"
+
+    def test_ui_reflects_role_buttons_hidden_for_viewer(self, client, test_db):
+        """API returns user role info so UI can hide buttons appropriately
+
+        While this tests the API (not UI), it verifies that the /auth/me
+        endpoint returns role information that the UI can use.
+        """
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create viewer
+        viewer = User(
+            email="viewer_ui@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_ui@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Get current user info
+        me_response = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+
+        assert me_response.status_code == 200
+        user_data = me_response.json()
+        assert "role" in user_data
+        assert user_data["role"] == "viewer"

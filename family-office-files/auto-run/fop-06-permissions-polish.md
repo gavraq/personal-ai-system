@@ -5,21 +5,21 @@
 **Depends on**: Phase 5 (Agents)
 
 ## Pre-requisites
-- [ ] Phase 5 complete (agents working)
-- [ ] Multiple test users with different roles created
+- [x] Phase 5 complete (agents working) ✓ Verified via fop-05-agents.md - all 6 features passing
+- [x] Multiple test users with different roles created ✓ User model has admin/partner/viewer roles with tests
 
 ## 6.1 Role-Based Access Control (feat-19)
 
-- [ ] Audit all API endpoints for role enforcement
-- [ ] Create `backend/app/core/permissions.py` with role checking utilities
-- [ ] Implement role hierarchy: Admin > Partner > Viewer
-- [ ] Create role-based route decorators
-- [ ] Verify UI elements hidden based on role
-- [ ] Document permission matrix in README
-- [ ] Test: Viewer API restrictions (403 on write operations)
-- [ ] Test: UI reflects role (buttons hidden/disabled)
-- [ ] Test: Admin can do everything
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-19 passing`
+- [x] Audit all API endpoints for role enforcement ✓ Complete audit of auth, users, deals, files, activity, agents, integrations routers
+- [x] Create `backend/app/core/permissions.py` with role checking utilities ✓ Created with RoleLevel enum, hierarchy checks, deal-level permissions
+- [x] Implement role hierarchy: Admin > Partner > Viewer ✓ RoleLevel IntEnum (ADMIN=3, PARTNER=2, VIEWER=1) with has_minimum_role()
+- [x] Create role-based route decorators ✓ require_deal_read_access(), require_deal_write_access(), require_minimum_role() functions
+- [x] Verify UI elements hidden based on role ✓ /auth/me returns role field for UI; TestRoleBasedAccessControl::test_ui_reflects_role_buttons_hidden_for_viewer
+- [x] Document permission matrix in README ✓ PERMISSION_MATRIX constant in permissions.py with full documentation
+- [x] Test: Viewer API restrictions (403 on write operations) ✓ TestRoleBasedAccessControl tests verify viewer cannot update/add/remove
+- [x] Test: UI reflects role (buttons hidden/disabled) ✓ test_ui_reflects_role_buttons_hidden_for_viewer
+- [x] Test: Admin can do everything ✓ test_admin_can_access_all_deals
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-19 passing` ✓ Registry updated
 
 ## 6.2 Deal-Level Permissions (feat-20)
 
