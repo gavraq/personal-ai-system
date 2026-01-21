@@ -59,12 +59,12 @@
 
 ## 6.5 Error Handling & Edge Cases
 
-- [ ] Implement global error handler in FastAPI
-- [ ] Consistent error response format: {error, message, details}
-- [ ] Handle: 400 (validation), 401 (auth), 403 (permission), 404 (not found), 500 (server)
-- [ ] Frontend error boundary component
-- [ ] Toast notifications for errors
-- [ ] Retry logic for transient failures
+- [x] Implement global error handler in FastAPI ✓ Created backend/app/core/exceptions.py with AppException, ErrorCode enum, and handler registration
+- [x] Consistent error response format: {error, message, details} ✓ ErrorResponse Pydantic model + custom exception classes
+- [x] Handle: 400 (validation), 401 (auth), 403 (permission), 404 (not found), 500 (server) ✓ All HTTP codes mapped to ErrorCode enum with appropriate handlers
+- [x] Frontend error boundary component ✓ Created components/error/ErrorBoundary.tsx with retry and home navigation
+- [x] Toast notifications for errors ✓ Created components/ui/toast.tsx with ToastProvider and useToast hook (success/error/warning/info variants)
+- [x] Retry logic for transient failures ✓ Created lib/errors.ts with withRetry() exponential backoff for transient errors (500, 502, 503, 504, 429)
 
 ## 6.6 Performance & Optimization
 

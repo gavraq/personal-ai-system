@@ -5,6 +5,7 @@ Main application entry point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .core.exceptions import register_exception_handlers
 from .routers import auth_router, users_router, deals_router, integrations_router, files_router, activity_router, agents_router, audit_router
 
 app = FastAPI(
@@ -12,6 +13,9 @@ app = FastAPI(
     description="Collaboration platform for Family Office Partnership",
     version="0.1.0"
 )
+
+# Register global exception handlers for consistent error responses
+register_exception_handlers(app)
 
 # CORS configuration
 app.add_middleware(
