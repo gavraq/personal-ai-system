@@ -13,7 +13,7 @@
 - [x] Create `backend/Dockerfile` with Python 3.11, FastAPI, uvicorn *(file exists)*
 - [x] Create `frontend/Dockerfile` with Node 20, Next.js dev server *(file exists)*
 - [x] Create `.env.example` with all required environment variables *(file exists with DB, JWT, Google, Anthropic vars)*
-- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:34 UTC: Docker CLI commands still hanging. Verified stuck `docker version` process (PID 88575). Docker Desktop is running (com.docker.backend, com.docker.virtualization processes active) but CLI socket communication appears broken. **User action required**: Quit Docker Desktop completely (right-click tray icon → Quit Docker Desktop), wait 10 seconds, restart Docker Desktop, then re-run this task. All prerequisite files verified and ready.)*
+- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:45 UTC: Docker CLI still unresponsive. Multiple test commands (`docker version`, `docker ps`) timed out after 8+ seconds. Docker Desktop processes confirmed running (com.docker.backend PID 39253, com.docker.virtualization PID 39321) but CLI-to-daemon socket communication remains broken. **User action required**: Quit Docker Desktop completely via menu bar icon → Quit Docker Desktop, wait 10 seconds, restart Docker Desktop, wait for "Docker Desktop is running" notification, then re-run this task.)*
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing`
 
 ## 1.2 Database Schema (feat-35)
