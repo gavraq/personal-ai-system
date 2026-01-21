@@ -268,13 +268,20 @@ async def upload_file(
 async def list_deal_files(
     deal_id: UUID,
     source: Optional[str] = Query(None, description="Filter by source (drive or gcs)"),
+    search: Optional[str] = Query(None, description="Search files by name (case-insensitive partial match)"),
+    sort_by: Optional[str] = Query("date", description="Sort by: name, date, type"),
+    sort_order: Optional[str] = Query("desc", description="Sort order: asc or desc"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List all files associated with a deal.
 
-    Optionally filter by source type (drive or gcs).
+    - **source**: Filter by source type (drive or gcs)
+    - **search**: Search files by name (case-insensitive partial match)
+    - **sort_by**: Sort by field (name, date, type). Defaults to date.
+    - **sort_order**: Sort direction (asc, desc). Defaults to desc.
+
     User must be a deal member or admin.
     """
     # Get the deal
@@ -295,13 +302,33 @@ async def list_deal_files(
     # Build query
     query = db.query(File).filter(File.deal_id == deal_id)
 
+    # Filter by source
     if source:
         if source == "drive":
             query = query.filter(File.source == FileSource.DRIVE)
         elif source == "gcs":
             query = query.filter(File.source == FileSource.GCS)
 
-    files = query.order_by(File.created_at.desc()).all()
+    # Search by filename (case-insensitive)
+    if search:
+        query = query.filter(File.name.ilike(f"%{search}%"))
+
+    # Determine sort column
+    sort_column = File.created_at  # default
+    if sort_by == "name":
+        sort_column = File.name
+    elif sort_by == "type":
+        sort_column = File.mime_type
+    elif sort_by == "date":
+        sort_column = File.created_at
+
+    # Apply sort order
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    files = query.all()
 
     return FileListResponse(
         files=[FileResponse.model_validate(f) for f in files],

@@ -77,18 +77,30 @@
 
 ## 3.4 File Listing Per Deal (feat-16)
 
-- [ ] Implement GET `/api/deals/{deal_id}/files` - list all files
-- [ ] Return unified list from both Drive and GCS sources
-- [ ] Include source indicator (drive/gcs), name, size, mime_type, uploaded_by, created_at
-- [ ] Support sorting: name, date, type
-- [ ] Support search/filter by filename
-- [ ] Create `frontend/components/files/FileList.tsx` component
-- [ ] Display source icon (Drive vs Upload)
-- [ ] Add sort and filter controls
-- [ ] Test: List shows both Drive and GCS files
-- [ ] Test: Sort by date works
-- [ ] Test: Search filters results
+- [x] Implement GET `/api/deals/{deal_id}/files` - list all files ✓ Enhanced with sort_by, sort_order, search params
+- [x] Return unified list from both Drive and GCS sources ✓ FileListResponse with FileResponse models
+- [x] Include source indicator (drive/gcs), name, size, mime_type, uploaded_by, created_at ✓ FileResponse schema
+- [x] Support sorting: name, date, type ✓ sort_by=name|date|type, sort_order=asc|desc
+- [x] Support search/filter by filename ✓ search param with case-insensitive ilike matching
+- [x] Create `frontend/components/files/FileList.tsx` component ✓ Full implementation with all features
+- [x] Display source icon (Drive vs Upload) ✓ DriveIcon and UploadIcon components
+- [x] Add sort and filter controls ✓ Search input, source filter buttons, sort buttons
+- [x] Test: List shows both Drive and GCS files ✓ test_list_files_filter_by_source
+- [x] Test: Sort by date works ✓ test_list_files_sort_by_date_desc
+- [x] Test: Search filters results ✓ test_list_files_search_by_filename, test_list_files_search_no_results
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-16 passing`
+
+**Note:** Implementation complete. Also created/updated:
+- `backend/app/routers/files.py` - Enhanced list_deal_files with sort_by, sort_order, search parameters
+- `frontend/components/files/FileList.tsx` - Full-featured file list component with sort/filter/search
+- `frontend/lib/api.ts` - Added FileListOptions interface and updated filesApi.list()
+- `frontend/components/files/index.ts` - Exported FileList component
+- `backend/tests/test_files.py` - Added 5 new tests for sorting and search functionality:
+  - test_list_files_sort_by_date_desc
+  - test_list_files_sort_by_name_asc
+  - test_list_files_search_by_filename
+  - test_list_files_search_no_results
+  - test_list_files_combined_filter_sort_search
 
 ## 3.5 File Preview (feat-17)
 

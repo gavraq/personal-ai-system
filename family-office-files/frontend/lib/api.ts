@@ -268,12 +268,32 @@ export interface FileDownloadResponse {
   expires_in_minutes: number
 }
 
+// File list options
+export type FileSortBy = 'name' | 'date' | 'type'
+export type SortOrder = 'asc' | 'desc'
+
+export interface FileListOptions {
+  source?: FileSource
+  search?: string
+  sortBy?: FileSortBy
+  sortOrder?: SortOrder
+}
+
 // File API methods
 export const filesApi = {
-  list: async (dealId: string, source?: FileSource): Promise<FileListResponse> => {
+  list: async (dealId: string, options?: FileListOptions): Promise<FileListResponse> => {
     const params = new URLSearchParams()
-    if (source) {
-      params.append('source', source)
+    if (options?.source) {
+      params.append('source', options.source)
+    }
+    if (options?.search) {
+      params.append('search', options.search)
+    }
+    if (options?.sortBy) {
+      params.append('sort_by', options.sortBy)
+    }
+    if (options?.sortOrder) {
+      params.append('sort_order', options.sortOrder)
     }
     const url = params.toString()
       ? `/api/deals/${dealId}/files?${params.toString()}`

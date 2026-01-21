@@ -408,6 +408,236 @@ class TestListDealFiles:
 
         assert response.status_code == 403
 
+    def test_list_files_sort_by_date_desc(self, client, test_db):
+        """Files are sorted by date descending by default"""
+        from app.core.database import get_db
+        from datetime import datetime, timedelta
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, user)
+
+        # Create files with different timestamps
+        file1 = File(
+            deal_id=deal.id,
+            name="OldFile.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=user.id
+        )
+        db.add(file1)
+        db.commit()
+
+        # Add newer file
+        file2 = File(
+            deal_id=deal.id,
+            name="NewFile.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_2",
+            uploaded_by=user.id
+        )
+        db.add(file2)
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.get(
+            f"/api/deals/{deal.id}/files?sort_by=date&sort_order=desc",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        # Newest file should be first
+        assert data["files"][0]["name"] == "NewFile.pdf"
+        assert data["files"][1]["name"] == "OldFile.pdf"
+
+    def test_list_files_sort_by_name_asc(self, client, test_db):
+        """Can sort files by name ascending"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, user)
+
+        # Create files with different names
+        file1 = File(
+            deal_id=deal.id,
+            name="Zebra.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=user.id
+        )
+        file2 = File(
+            deal_id=deal.id,
+            name="Alpha.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_2",
+            uploaded_by=user.id
+        )
+        file3 = File(
+            deal_id=deal.id,
+            name="Beta.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_3",
+            uploaded_by=user.id
+        )
+        db.add_all([file1, file2, file3])
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.get(
+            f"/api/deals/{deal.id}/files?sort_by=name&sort_order=asc",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        names = [f["name"] for f in data["files"]]
+        assert names == ["Alpha.pdf", "Beta.pdf", "Zebra.pdf"]
+
+    def test_list_files_search_by_filename(self, client, test_db):
+        """Can search files by filename (case-insensitive)"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, user)
+
+        # Create files with different names
+        file1 = File(
+            deal_id=deal.id,
+            name="Contract_Draft.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=user.id
+        )
+        file2 = File(
+            deal_id=deal.id,
+            name="Financial_Report.xlsx",
+            source=FileSource.GCS,
+            source_id="gcs/path/file.xlsx",
+            uploaded_by=user.id
+        )
+        file3 = File(
+            deal_id=deal.id,
+            name="contract_final.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_3",
+            uploaded_by=user.id
+        )
+        db.add_all([file1, file2, file3])
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        # Search for "contract" (case-insensitive)
+        response = client.get(
+            f"/api/deals/{deal.id}/files?search=contract",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        names = [f["name"] for f in data["files"]]
+        assert "Contract_Draft.pdf" in names
+        assert "contract_final.pdf" in names
+        assert "Financial_Report.xlsx" not in names
+
+    def test_list_files_search_no_results(self, client, test_db):
+        """Search returns empty list when no matches"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, user)
+
+        file1 = File(
+            deal_id=deal.id,
+            name="Document.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=user.id
+        )
+        db.add(file1)
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        response = client.get(
+            f"/api/deals/{deal.id}/files?search=nonexistent",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["files"] == []
+
+    def test_list_files_combined_filter_sort_search(self, client, test_db):
+        """Can combine source filter, sort, and search"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        user = create_test_user(db, "partner@test.com", "partner")
+        deal = create_test_deal(db, user)
+
+        # Create mixed files
+        file1 = File(
+            deal_id=deal.id,
+            name="Report_2023.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_1",
+            uploaded_by=user.id
+        )
+        file2 = File(
+            deal_id=deal.id,
+            name="Report_2024.pdf",
+            source=FileSource.GCS,
+            source_id="gcs/path/file.pdf",
+            uploaded_by=user.id
+        )
+        file3 = File(
+            deal_id=deal.id,
+            name="Report_2022.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_3",
+            uploaded_by=user.id
+        )
+        file4 = File(
+            deal_id=deal.id,
+            name="Contract.pdf",
+            source=FileSource.DRIVE,
+            source_id="drive_id_4",
+            uploaded_by=user.id
+        )
+        db.add_all([file1, file2, file3, file4])
+        db.commit()
+
+        token = login_user(client, "partner@test.com")
+
+        # Search for "report", filter by drive, sort by name ascending
+        response = client.get(
+            f"/api/deals/{deal.id}/files?search=report&source=drive&sort_by=name&sort_order=asc",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        names = [f["name"] for f in data["files"]]
+        # Should be sorted alphabetically and only include drive files matching "report"
+        assert names == ["Report_2022.pdf", "Report_2023.pdf"]
+
 
 class TestSelectMultipleFiles:
     """Tests for feat-14: Select multiple files"""
