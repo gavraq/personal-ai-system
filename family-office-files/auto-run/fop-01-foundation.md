@@ -53,14 +53,14 @@
 
 ## 1.5 Role Assignment (feat-3)
 
-- [ ] Add `role` enum field to User model (admin, partner, viewer)
-- [ ] Create PUT `/api/users/{user_id}/role` endpoint (admin only)
-- [ ] Create GET `/api/users` endpoint to list users (admin only)
-- [ ] Add role check decorator/dependency for endpoint protection
-- [ ] Test: Admin can assign Partner role
-- [ ] Test: Partner cannot change roles (403)
-- [ ] Test: Role change reflects in user permissions
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-3 passing`
+- [x] Add `role` enum field to User model (admin, partner, viewer) *(already existed from feat-35 migration with UserRole enum)*
+- [x] Create PUT `/api/users/{user_id}/role` endpoint (admin only) *(COMPLETED 2026-01-21: Created users router with admin-only role update endpoint)*
+- [x] Create GET `/api/users` endpoint to list users (admin only) *(COMPLETED 2026-01-21: Paginated user list with admin-only access)*
+- [x] Add role check decorator/dependency for endpoint protection *(COMPLETED 2026-01-21: Created require_role() dependency factory and require_admin convenience dep in deps.py)*
+- [x] Test: Admin can assign Partner role *(PASSED)*
+- [x] Test: Partner cannot change roles (403) *(PASSED)*
+- [x] Test: Role change reflects in user permissions *(PASSED)*
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-3 passing` *(DONE - 30 tests passing)*
 
 ## 1.6 Session Management (feat-4)
 

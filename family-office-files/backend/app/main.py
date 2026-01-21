@@ -5,7 +5,7 @@ Main application entry point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import auth_router
+from .routers import auth_router, users_router
 
 app = FastAPI(
     title="Family Office Files API",
@@ -37,3 +37,4 @@ async def health_check():
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(users_router)
