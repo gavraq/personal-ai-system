@@ -5,22 +5,27 @@
 **Depends on**: Phase 2 (Deals)
 
 ## Pre-requisites
-- [ ] Phase 2 complete (deals working)
+- [x] Phase 2 complete (deals working) ✓ feat-9,10,11,12 all passing
 - [ ] Google Cloud project created with Drive API enabled
 - [ ] Google Cloud Storage bucket created
 - [ ] OAuth 2.0 credentials configured
 
 ## 3.1 Google Drive OAuth (feat-13)
 
-- [ ] Create `backend/app/routers/integrations.py` for Google integration
-- [ ] Implement GET `/api/integrations/google/auth` - initiate OAuth flow
-- [ ] Implement GET `/api/integrations/google/callback` - OAuth callback
-- [ ] Store refresh token in google_connections table
-- [ ] Implement DELETE `/api/integrations/google` - disconnect
-- [ ] Implement token refresh logic when access token expires
-- [ ] Test: Connect Google Drive completes OAuth flow
-- [ ] Test: Disconnect removes stored tokens
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-13 passing`
+- [x] Create `backend/app/routers/integrations.py` for Google integration
+- [x] Implement GET `/api/integrations/google/auth` - initiate OAuth flow
+- [x] Implement GET `/api/integrations/google/callback` - OAuth callback
+- [x] Store refresh token in google_connections table
+- [x] Implement DELETE `/api/integrations/google` - disconnect
+- [x] Implement token refresh logic when access token expires
+- [x] Test: Connect Google Drive completes OAuth flow ✓ test_callback_stores_tokens_in_database
+- [x] Test: Disconnect removes stored tokens ✓ test_disconnect_removes_stored_tokens
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-13 passing`
+
+**Note:** Also created:
+- `backend/app/schemas/google.py` - Pydantic schemas for Google responses
+- `backend/tests/test_integrations.py` - Unit tests for Google OAuth endpoints
+- Added `GoogleConnection` model import to conftest.py
 
 ## 3.2 Drive Picker Integration (feat-14)
 
