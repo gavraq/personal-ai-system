@@ -4,9 +4,39 @@ Agent execution schemas for request/response validation
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from ..models.agent import AgentType, AgentStatus
+from ..models.agent import AgentType, AgentStatus, MessageRole
+
+
+class AgentRunStartRequest(BaseModel):
+    """Request schema for starting an agent run"""
+    query: str = Field(..., description="The query or request for the agent", min_length=1)
+    context: Optional[dict] = Field(default=None, description="Additional context")
+
+
+class AgentRunStartResponse(BaseModel):
+    """Response schema after starting an agent run"""
+    run_id: UUID
+    status: AgentStatus
+    message: str = "Agent run started"
+
+
+class AgentMessageResponse(BaseModel):
+    """Response schema for a single agent message"""
+    id: UUID
+    role: MessageRole
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AgentMessagesResponse(BaseModel):
+    """Response schema for agent messages list"""
+    messages: list[AgentMessageResponse]
+    total: int
 
 
 class AgentRunResponse(BaseModel):

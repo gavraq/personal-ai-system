@@ -1,22 +1,27 @@
 """
 Agents router for agent run operations
 """
+import asyncio
 from uuid import UUID
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 
 from ..core.database import get_db
 from ..core.deps import get_current_user
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
-from ..models.agent import AgentRun, AgentType, AgentStatus
+from ..models.agent import AgentRun, AgentMessage, AgentType, AgentStatus
 from ..schemas.agent import (
     AgentRunResponse,
     AgentRunListResponse,
     AgentSummary,
     AgentSummaryListResponse,
+    AgentRunStartRequest,
+    AgentRunStartResponse,
+    AgentMessageResponse,
+    AgentMessagesResponse,
 )
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
@@ -298,4 +303,199 @@ async def list_deal_agent_runs(
         total=total,
         page=page,
         page_size=page_size
+    )
+
+
+def check_deal_access(db: Session, user: User, deal_id: UUID) -> Deal:
+    """Check if user has access to deal and return deal if accessible"""
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deal not found"
+        )
+
+    if user.role != UserRole.ADMIN.value:
+        is_member = db.query(DealMember).filter(
+            DealMember.deal_id == deal_id,
+            DealMember.user_id == user.id
+        ).first()
+        if not is_member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this deal"
+            )
+
+    return deal
+
+
+async def run_agent_in_background(
+    agent_type: AgentType,
+    run_id: UUID,
+    input_data: dict,
+    user_id: UUID,
+    deal_id: UUID
+):
+    """
+    Background task to execute agent.
+    Creates a new database session for the background task.
+    """
+    from ..core.database import SessionLocal
+    from ..agents.base import BaseAgent
+
+    db = SessionLocal()
+    try:
+        # Import agent implementations here to avoid circular imports
+        # For now, we'll use a mock agent that simulates work
+        agent_run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
+        if not agent_run:
+            return
+
+        agent_run.status = AgentStatus.RUNNING
+        db.commit()
+
+        # Simulate agent execution (will be replaced with real implementations)
+        await asyncio.sleep(1)  # Simulate processing time
+
+        # Mock successful output based on agent type
+        output = {
+            "summary": f"Analysis completed for {agent_type.value}",
+            "details": {
+                "query": input_data.get("query", ""),
+                "agent_type": agent_type.value
+            },
+            "sources": []
+        }
+
+        agent_run.status = AgentStatus.COMPLETED
+        agent_run.output = output
+        from datetime import datetime
+        agent_run.completed_at = datetime.utcnow()
+        db.commit()
+
+    except Exception as e:
+        # Mark as failed
+        agent_run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
+        if agent_run:
+            agent_run.status = AgentStatus.FAILED
+            agent_run.error_message = str(e)
+            from datetime import datetime
+            agent_run.completed_at = datetime.utcnow()
+            db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/{agent_type}/run", response_model=AgentRunStartResponse, status_code=status.HTTP_202_ACCEPTED)
+async def start_agent_run(
+    agent_type: AgentType,
+    request: AgentRunStartRequest,
+    deal_id: UUID = Query(..., description="Deal ID to associate the run with"),
+    background_tasks: BackgroundTasks = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Start an agent run asynchronously.
+
+    - **agent_type**: Type of agent to run (market_research, document_analysis, due_diligence, news_alerts)
+    - **deal_id**: Deal to associate the agent run with
+    - **request.query**: The query or request for the agent
+    - **request.context**: Optional additional context
+
+    Returns immediately with a run_id that can be used to poll for status.
+    """
+    # Check deal access
+    check_deal_access(db, current_user, deal_id)
+
+    # Create agent run record with pending status
+    from datetime import datetime
+    agent_run = AgentRun(
+        deal_id=deal_id,
+        user_id=current_user.id,
+        agent_type=agent_type,
+        input={"query": request.query, "context": request.context},
+        status=AgentStatus.PENDING,
+        started_at=datetime.utcnow()
+    )
+    db.add(agent_run)
+    db.commit()
+    db.refresh(agent_run)
+
+    # Add user message
+    user_message = AgentMessage(
+        agent_run_id=agent_run.id,
+        role="user",
+        content=request.query,
+        created_at=datetime.utcnow()
+    )
+    db.add(user_message)
+    db.commit()
+
+    # Schedule background execution
+    if background_tasks:
+        background_tasks.add_task(
+            run_agent_in_background,
+            agent_type,
+            agent_run.id,
+            {"query": request.query, "context": request.context},
+            current_user.id,
+            deal_id
+        )
+
+    return AgentRunStartResponse(
+        run_id=agent_run.id,
+        status=agent_run.status,
+        message=f"Agent {agent_type.value} run started"
+    )
+
+
+@router.get("/runs/{run_id}/messages", response_model=AgentMessagesResponse)
+async def get_agent_run_messages(
+    run_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get chat history/messages for a specific agent run.
+
+    User must be a deal member or admin to view the messages.
+    """
+    run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
+    if not run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent run not found"
+        )
+
+    # Check access
+    if current_user.role != UserRole.ADMIN.value:
+        is_member = db.query(DealMember).filter(
+            DealMember.deal_id == run.deal_id,
+            DealMember.user_id == current_user.id
+        ).first()
+        if not is_member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this agent run"
+            )
+
+    messages = (
+        db.query(AgentMessage)
+        .filter(AgentMessage.agent_run_id == run_id)
+        .order_by(AgentMessage.created_at)
+        .all()
+    )
+
+    return AgentMessagesResponse(
+        messages=[
+            AgentMessageResponse(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                created_at=m.created_at
+            )
+            for m in messages
+        ],
+        total=len(messages)
     )

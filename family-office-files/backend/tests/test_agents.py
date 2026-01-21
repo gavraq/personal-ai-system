@@ -535,3 +535,348 @@ class TestAgentOutputSummaries:
         # All runs should be for deal 1
         for run in data["runs"]:
             assert run["deal_id"] == deal1_id
+
+
+class TestAgentDelegationFramework:
+    """Tests for feat-27: Agent Delegation Framework"""
+
+    def test_start_agent_returns_run_id(self, client, test_db):
+        """POST /api/agents/{agent_type}/run returns a run_id for async execution"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_framework1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Framework Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Start agent run
+        response = client.post(
+            f"/api/agents/market_research/run?deal_id={deal_id}",
+            json={"query": "Analyze the tech market"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202  # Accepted
+        data = response.json()
+        assert "run_id" in data
+        assert data["status"] == "pending"
+        assert "market_research" in data["message"]
+
+    def test_status_polling_returns_progress(self, client, test_db):
+        """GET /api/agents/runs/{run_id} returns current status"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_framework2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework2@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Status Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a running agent run directly
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.MARKET_RESEARCH,
+            status=AgentStatus.RUNNING,
+            input={"query": "test query"},
+            started_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Poll for status
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "running"
+        assert data["id"] == str(agent_run.id)
+
+    def test_get_agent_run_messages(self, client, test_db):
+        """GET /api/agents/runs/{run_id}/messages returns chat history"""
+        from app.core.database import get_db
+        from app.models.agent import AgentMessage, MessageRole
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_framework3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework3@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Messages Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create agent run with messages
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DOCUMENT_ANALYSIS,
+            status=AgentStatus.COMPLETED,
+            input={"query": "Analyze document"},
+            output={"summary": "Analysis complete"},
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Add messages
+        user_msg = AgentMessage(
+            agent_run_id=agent_run.id,
+            role=MessageRole.USER,
+            content="Analyze document",
+            created_at=datetime.utcnow()
+        )
+        db.add(user_msg)
+
+        assistant_msg = AgentMessage(
+            agent_run_id=agent_run.id,
+            role=MessageRole.ASSISTANT,
+            content="Analysis complete",
+            created_at=datetime.utcnow()
+        )
+        db.add(assistant_msg)
+        db.commit()
+
+        # Get messages
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}/messages",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        assert len(data["messages"]) == 2
+        assert data["messages"][0]["role"] == "user"
+        assert data["messages"][1]["role"] == "assistant"
+
+    def test_error_handling_returns_graceful_error(self, client, test_db):
+        """Agent errors are stored in error_message field"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_framework4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework4@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Error Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create a failed agent run
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DUE_DILIGENCE,
+            status=AgentStatus.FAILED,
+            input={"query": "Check company"},
+            error_message="API connection failed after 3 retries",
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get the failed run
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "failed"
+        assert "3 retries" in data["error_message"]
+
+    def test_agent_run_stored_with_deal_association(self, client, test_db):
+        """Agent runs are correctly associated with deals"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_framework5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework5@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Association Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Start agent run
+        response = client.post(
+            f"/api/agents/news_alerts/run?deal_id={deal_id}",
+            json={"query": "Monitor tech news"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202
+        run_id = response.json()["run_id"]
+
+        # Verify the run is associated with the deal
+        run_response = client.get(
+            f"/api/agents/runs/{run_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert run_response.status_code == 200
+        data = run_response.json()
+        assert data["deal_id"] == deal_id
+        assert data["input"]["query"] == "Monitor tech news"
+
+    def test_unauthorized_user_cannot_start_agent(self, client, test_db):
+        """Users without deal access cannot start agent runs"""
+        from app.core.database import get_db
+        from app.models.deal import DealMember
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin and viewer
+        admin = User(
+            email="admin_framework6@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        viewer = User(
+            email="viewer_framework6@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+        db.refresh(admin)
+        db.refresh(viewer)
+
+        # Admin creates deal (viewer not assigned)
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_framework6@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Admin Only Deal"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Viewer tries to start agent on admin's deal
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_framework6@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        response = client.post(
+            f"/api/agents/market_research/run?deal_id={deal_id}",
+            json={"query": "Unauthorized query"},
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+
+        assert response.status_code == 403
+        assert "access" in response.json()["detail"].lower()
