@@ -45,17 +45,17 @@
 
 ## 6.4 Permission Audit Log (feat-22)
 
-- [ ] Create `backend/app/core/audit.py` for audit logging
-- [ ] Log all permission changes: role changes, deal membership, file shares
-- [ ] Audit entry: actor_id, action, entity_type, entity_id, old_value, new_value, timestamp
-- [ ] Make audit entries immutable (no UPDATE/DELETE)
-- [ ] Implement GET `/api/audit` - paginated audit log (Admin only)
-- [ ] Create `frontend/app/admin/audit/page.tsx` for viewing audit log
-- [ ] Filter by: action type, actor, entity, date range
-- [ ] Test: Role change creates audit entry
-- [ ] Test: Audit log visible to Admins
-- [ ] Test: Audit entries cannot be modified
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-22 passing`
+- [x] Create `backend/app/core/audit.py` for audit logging ✓ Created with AuditAction, EntityType, and logging functions
+- [x] Log all permission changes: role changes, deal membership, file shares ✓ log_role_change(), log_deal_membership_change(), log_file_share()
+- [x] Audit entry: actor_id, action, entity_type, entity_id, old_value, new_value, timestamp ✓ Uses existing AuditLog model in models/audit.py
+- [x] Make audit entries immutable (no UPDATE/DELETE) ✓ Router only has GET endpoints, tests verify 405 on PUT/DELETE
+- [x] Implement GET `/api/audit` - paginated audit log (Admin only) ✓ routers/audit.py with require_admin dependency
+- [x] Create `frontend/app/admin/audit/page.tsx` for viewing audit log ✓ Full-featured admin page with filtering
+- [x] Filter by: action type, actor, entity, date range ✓ All filters implemented with query params
+- [x] Test: Role change creates audit entry ✓ TestRoleChangeCreatesAuditEntry::test_role_change_creates_audit_entry
+- [x] Test: Audit log visible to Admins ✓ TestAuditLogEndpoints::test_admin_can_view_audit_log
+- [x] Test: Audit entries cannot be modified ✓ TestAuditEntriesAreImmutable (no PUT/DELETE endpoints)
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-22 passing` ✓
 
 ## 6.5 Error Handling & Edge Cases
 

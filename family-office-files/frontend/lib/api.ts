@@ -534,4 +534,55 @@ export const agentsApi = {
   },
 }
 
+// Audit log types
+export interface AuditLogEntry {
+  id: string
+  actor_id: string
+  actor_email: string | null
+  action: string
+  entity_type: string
+  entity_id: string
+  old_value: Record<string, unknown> | null
+  new_value: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface AuditLogListResponse {
+  entries: AuditLogEntry[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface AuditLogFilters {
+  action?: string
+  actor_id?: string
+  entity_type?: string
+  entity_id?: string
+  from_date?: string
+  to_date?: string
+}
+
+// Audit API methods
+export const auditApi = {
+  list: async (page = 1, pageSize = 50, filters?: AuditLogFilters): Promise<AuditLogListResponse> => {
+    const params = new URLSearchParams()
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    if (filters?.action) params.append('action', filters.action)
+    if (filters?.actor_id) params.append('actor_id', filters.actor_id)
+    if (filters?.entity_type) params.append('entity_type', filters.entity_type)
+    if (filters?.entity_id) params.append('entity_id', filters.entity_id)
+    if (filters?.from_date) params.append('from_date', filters.from_date)
+    if (filters?.to_date) params.append('to_date', filters.to_date)
+    const response = await api.get<AuditLogListResponse>(`/api/audit?${params.toString()}`)
+    return response.data
+  },
+
+  get: async (entryId: string): Promise<AuditLogEntry> => {
+    const response = await api.get<AuditLogEntry>(`/api/audit/${entryId}`)
+    return response.data
+  },
+}
+
 export default api

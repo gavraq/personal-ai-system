@@ -33,6 +33,7 @@ from ..schemas.deal import (
     DealStatusEnum,
 )
 from .activity import log_activity
+from ..core.audit import log_deal_membership_change, log_deal_role_override, AuditAction
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
 
@@ -386,6 +387,16 @@ async def add_deal_member(
         details={"user_email": target_user.email, "user_id": str(request.user_id)}
     )
 
+    # Log to audit log
+    log_deal_membership_change(
+        db=db,
+        actor=current_user,
+        deal_id=deal_id,
+        user_id=request.user_id,
+        action=AuditAction.MEMBER_ADD,
+        new_value={"user_id": str(request.user_id), "user_email": target_user.email, "role_override": request.role_override}
+    )
+
     db.commit()
     db.refresh(member)
 
@@ -510,6 +521,16 @@ async def remove_deal_member(
         actor_id=current_user.id,
         action="member_remove",
         details={"user_email": removed_user.email if removed_user else None, "user_id": str(user_id)}
+    )
+
+    # Log to audit log
+    log_deal_membership_change(
+        db=db,
+        actor=current_user,
+        deal_id=deal_id,
+        user_id=user_id,
+        action=AuditAction.MEMBER_REMOVE,
+        old_value={"user_id": str(user_id), "user_email": removed_user.email if removed_user else None, "role_override": member.role_override}
     )
 
     db.delete(member)

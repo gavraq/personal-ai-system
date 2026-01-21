@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..core.database import get_db
 from ..core.deps import require_admin
+from ..core.audit import log_role_change
 from ..models.user import User, UserRole
 from ..schemas.user import RoleUpdateRequest, UserResponse, UserListResponse
 
@@ -94,8 +95,21 @@ async def update_user_role(
                 detail="Cannot demote the last admin user"
             )
 
+    # Capture old role for audit log
+    old_role = user.role
+
     # Update the role
     user.role = request.role.value
+
+    # Log the role change in audit log
+    log_role_change(
+        db=db,
+        actor=current_user,
+        user_id=user.id,
+        old_role=old_role,
+        new_role=request.role.value
+    )
+
     db.commit()
     db.refresh(user)
 

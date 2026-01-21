@@ -27,6 +27,7 @@ from ..schemas.file import (
     SharedFileListResponse,
 )
 from .activity import log_activity
+from ..core.audit import log_file_share, AuditAction
 
 router = APIRouter(prefix="/api", tags=["files"])
 
@@ -622,6 +623,17 @@ async def share_file(
             permission=FilePermission(request.permission.value)
         )
         db.add(share)
+
+        # Log to audit log
+        log_file_share(
+            db=db,
+            actor=current_user,
+            file_id=file_id,
+            shared_with_user_id=request.user_id,
+            permission=request.permission.value,
+            action=AuditAction.FILE_SHARE
+        )
+
         db.commit()
         db.refresh(share)
 
@@ -693,6 +705,16 @@ async def revoke_file_share(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File share not found"
         )
+
+    # Log to audit log before deletion
+    log_file_share(
+        db=db,
+        actor=current_user,
+        file_id=file_id,
+        shared_with_user_id=user_id,
+        permission=share.permission.value,
+        action=AuditAction.FILE_UNSHARE
+    )
 
     # Delete the share
     db.delete(share)
