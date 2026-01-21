@@ -101,11 +101,11 @@
 
 ## 5.7 Agent Integration with Deal Page
 
-- [ ] Add agent panel to deal detail page
-- [ ] Tab interface for each agent type
-- [ ] Context-aware prompts (pre-fill deal name, file list)
-- [ ] "Analyze this file" quick action on file list items
-- [ ] Agent results appear in activity feed
+- [x] Add agent panel to deal detail page ✓ AgentPanel component added to `/app/deals/[id]/page.tsx` with full agent integration
+- [x] Tab interface for each agent type ✓ Tabs UI component created with 4 agent tabs (Market Research, Document Analysis, Due Diligence, News & Alerts)
+- [x] Context-aware prompts (pre-fill deal name, file list) ✓ Deal title shown in agent chat context, file selection for document analysis with dynamic placeholder
+- [x] "Analyze this file" quick action on file list items ✓ Hover to reveal "🤖 Analyze" button on file list items, clicks scroll to agent panel and select file
+- [x] Agent results appear in activity feed ✓ ActivityFeed component added to deal detail page, refreshes on agent run completion
 
 ## Phase 5 Completion
 

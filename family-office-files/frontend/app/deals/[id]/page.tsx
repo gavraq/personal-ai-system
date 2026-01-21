@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge, EditDealModal, MemberManager } from '@/components/deals'
 import { DrivePicker, LinkedFile } from '@/components/files'
-import { dealsApi, filesApi, Deal, DealFile } from '@/lib/api'
+import { AgentPanel } from '@/components/agents'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
+import { dealsApi, filesApi, Deal, DealFile, AgentRun } from '@/lib/api'
 import { useAuthStore } from '@/lib/auth'
 import { authApi } from '@/lib/api'
 
@@ -35,6 +37,8 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
   const [memberModalOpen, setMemberModalOpen] = useState(false)
   const [files, setFiles] = useState<DealFile[]>([])
   const [filesLoading, setFilesLoading] = useState(false)
+  const [analyzeFileRequest, setAnalyzeFileRequest] = useState<{ fileId: string; fileName: string } | null>(null)
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0)
 
   // Load user data if not already loaded
   useEffect(() => {
@@ -110,6 +114,24 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
       filesApi.list(deal.id).then((response) => {
         setFiles(response.files)
       })
+    }
+  }
+
+  const handleAnalyzeFile = (fileId: string, fileName: string) => {
+    setAnalyzeFileRequest({ fileId, fileName })
+    // Scroll to agent panel
+    const agentPanel = document.getElementById('agent-panel')
+    if (agentPanel) {
+      agentPanel.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  const handleAgentRunComplete = (run: AgentRun) => {
+    // Refresh activity feed when an agent run completes
+    setActivityRefreshKey((prev) => prev + 1)
+    // Clear analyze file request after completion
+    if (run.agent_type === 'document_analysis') {
+      setAnalyzeFileRequest(null)
     }
   }
 
@@ -249,23 +271,30 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
               ) : (
                 <ul className="space-y-2">
                   {files.map((file) => (
-                    <li key={file.id} className="flex items-center gap-2 text-sm">
+                    <li key={file.id} className="flex items-center gap-2 text-sm group">
                       {file.source === 'drive' ? (
-                        <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                        <svg className="w-4 h-4 text-blue-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M4.433 22.396l4-6.928H24l-4 6.928H4.433zM15.653 15.468l-4-6.928 4-6.929 4 6.929-4 6.928zM1.545 15.468L5.545 8.54l4 6.928H1.545z" />
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-gray-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                           <polyline points="14 2 14 8 20 8" />
                         </svg>
                       )}
-                      <span className="truncate">{file.name}</span>
+                      <span className="truncate flex-1">{file.name}</span>
                       {file.size_bytes && (
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-xs flex-shrink-0">
                           ({Math.round(file.size_bytes / 1024)} KB)
                         </span>
                       )}
+                      <button
+                        onClick={() => handleAnalyzeFile(file.id, file.name)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 flex-shrink-0"
+                        title={`Analyze ${file.name}`}
+                      >
+                        🤖 Analyze
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -281,6 +310,25 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Agent Panel */}
+        <div id="agent-panel">
+          <AgentPanel
+            dealId={deal.id}
+            dealTitle={deal.title}
+            files={files}
+            onAgentRunComplete={handleAgentRunComplete}
+          />
+        </div>
+
+        {/* Activity Feed */}
+        <ActivityFeed
+          key={activityRefreshKey}
+          dealId={deal.id}
+          pageSize={10}
+          autoRefresh={true}
+          refreshInterval={30000}
+        />
 
         {/* Edit modal */}
         {deal && (

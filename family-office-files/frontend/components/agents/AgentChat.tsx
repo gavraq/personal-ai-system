@@ -19,6 +19,8 @@ interface AgentChatProps {
   dealTitle?: string
   initialAgentType?: AgentType
   onAgentRunComplete?: (run: AgentRun) => void
+  fileId?: string | null
+  fileName?: string | null
 }
 
 // Agent type configuration
@@ -181,6 +183,8 @@ export function AgentChat({
   dealTitle = 'Deal',
   initialAgentType = 'market_research',
   onAgentRunComplete,
+  fileId,
+  fileName,
 }: AgentChatProps) {
   const [agentType, setAgentType] = useState<AgentType>(initialAgentType)
   const [messages, setMessages] = useState<AgentMessage[]>([])
@@ -300,6 +304,7 @@ export function AgentChat({
     try {
       const response = await agentsApi.startRun(agentType, dealId, {
         query: userMessage.content,
+        file_id: agentType === 'document_analysis' && fileId ? fileId : undefined,
       })
 
       const { run_id, status } = response
@@ -419,6 +424,13 @@ export function AgentChat({
         <p className="text-sm text-muted-foreground mt-1">
           {config.description} - {dealTitle}
         </p>
+        {agentType === 'document_analysis' && fileName && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+              📄 Analyzing: {fileName}
+            </span>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="flex-1 overflow-y-auto p-4">
@@ -458,7 +470,11 @@ export function AgentChat({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={config.placeholder}
+            placeholder={
+              agentType === 'document_analysis' && fileName
+                ? `Ask about "${fileName}"...`
+                : config.placeholder
+            }
             disabled={isLoading}
             className="min-h-[44px] max-h-[120px] resize-none"
             rows={1}
