@@ -23,13 +23,13 @@
 
 ## 6.2 Deal-Level Permissions (feat-20)
 
-- [ ] Verify deal membership checks on all deal endpoints
-- [ ] Implement deal-level role override (e.g., Partner on one deal, Viewer on another)
-- [ ] Admin bypass for all deals
-- [ ] Test: Unassigned user cannot access deal (403)
-- [ ] Test: Admin can access all deals
-- [ ] Test: Deal-level role override works
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-20 passing`
+- [x] Verify deal membership checks on all deal endpoints ✓ Audited deals.py, files.py, agents.py, activity.py - all check membership via can_access_deal() or DealMember query
+- [x] Implement deal-level role override (e.g., Partner on one deal, Viewer on another) ✓ DealMember.role_override field + get_effective_deal_role() in permissions.py
+- [x] Admin bypass for all deals ✓ All permission functions check user.role == UserRole.ADMIN.value first
+- [x] Test: Unassigned user cannot access deal (403) ✓ TestDealLevelPermissions::test_unassigned_user_cannot_access_deal_returns_403
+- [x] Test: Admin can access all deals ✓ TestDealLevelPermissions::test_admin_can_access_all_deals_regardless_of_membership
+- [x] Test: Deal-level role override works ✓ TestDealLevelPermissions::test_deal_level_role_override_works, test_viewer_with_partner_override_can_write
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-20 passing` ✓
 
 ## 6.3 File-Level Permissions (feat-21)
 

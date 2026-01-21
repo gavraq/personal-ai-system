@@ -1254,3 +1254,424 @@ class TestRoleBasedAccessControl:
         user_data = me_response.json()
         assert "role" in user_data
         assert user_data["role"] == "viewer"
+
+
+class TestDealLevelPermissions:
+    """Tests for feat-20: Deal-Level Permissions
+
+    Tests for:
+    - Unassigned user cannot access deal (403)
+    - Admin can access all deals
+    - Deal-level role override works (e.g., Partner on one deal, Viewer on another)
+    """
+
+    def test_unassigned_user_cannot_access_deal_returns_403(self, client, test_db):
+        """Unassigned user (not a deal member) cannot access deal - returns 403"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin who creates the deal
+        admin = User(
+            email="admin_dlp1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner who is NOT a member of the deal
+        unassigned_partner = User(
+            email="unassigned_dlp1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(unassigned_partner)
+        db.commit()
+
+        # Admin creates deal
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp1@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Private Deal for DLP Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Login as unassigned partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "unassigned_dlp1@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # Unassigned partner tries to access deal - should get 403
+        get_response = client.get(
+            f"/api/deals/{deal_id}",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert get_response.status_code == 403
+        assert "access" in get_response.json()["detail"].lower()
+
+        # Try to update - should also get 403
+        update_response = client.put(
+            f"/api/deals/{deal_id}",
+            json={"title": "Hacked Title"},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert update_response.status_code == 403
+
+        # Try to list members - should also get 403
+        members_response = client.get(
+            f"/api/deals/{deal_id}/members",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert members_response.status_code == 403
+
+    def test_admin_can_access_all_deals_regardless_of_membership(self, client, test_db):
+        """Admin can access all deals even when not a member"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create partner who creates the deal
+        partner = User(
+            email="partner_dlp2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(partner)
+
+        # Create admin who is NOT a member of the deal
+        admin = User(
+            email="admin_dlp2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Partner creates deal
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "partner_dlp2@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Partner's Private Deal"},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Login as admin (not a member of this deal)
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp2@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        # Admin CAN access the deal
+        get_response = client.get(
+            f"/api/deals/{deal_id}",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert get_response.status_code == 200
+        assert get_response.json()["title"] == "Partner's Private Deal"
+
+        # Admin CAN update the deal
+        update_response = client.put(
+            f"/api/deals/{deal_id}",
+            json={"title": "Admin Modified Title"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["title"] == "Admin Modified Title"
+
+        # Admin CAN list members
+        members_response = client.get(
+            f"/api/deals/{deal_id}/members",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert members_response.status_code == 200
+
+        # Admin CAN delete the deal
+        delete_response = client.delete(
+            f"/api/deals/{deal_id}",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert delete_response.status_code == 204
+
+    def test_deal_level_role_override_works(self, client, test_db):
+        """Deal-level role override allows user to have different roles on different deals
+
+        Example: A user is a Partner globally but is added as a Viewer on a specific deal.
+        They should only be able to read (not write) on that deal.
+        """
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_dlp3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner user (global role is partner)
+        partner = User(
+            email="partner_dlp3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(partner)
+        db.commit()
+        db.refresh(partner)
+
+        # Admin creates two deals
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp3@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        # Deal 1: Partner added with no role override (uses global role)
+        create_response1 = client.post(
+            "/api/deals",
+            json={"title": "Deal 1 - Normal Partner Role"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal1_id = create_response1.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal1_id}/members",
+            json={"user_id": str(partner.id)},  # No role_override
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Deal 2: Partner added with viewer role override
+        create_response2 = client.post(
+            "/api/deals",
+            json={"title": "Deal 2 - Viewer Override"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal2_id = create_response2.json()["id"]
+
+        client.post(
+            f"/api/deals/{deal2_id}/members",
+            json={"user_id": str(partner.id), "role_override": "viewer"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "partner_dlp3@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # On Deal 1: Partner CAN update (uses global partner role)
+        update_response1 = client.put(
+            f"/api/deals/{deal1_id}",
+            json={"title": "Deal 1 - Partner Modified"},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert update_response1.status_code == 200
+        assert update_response1.json()["title"] == "Deal 1 - Partner Modified"
+
+        # On Deal 2: Partner CANNOT update (role override is viewer)
+        update_response2 = client.put(
+            f"/api/deals/{deal2_id}",
+            json={"title": "Deal 2 - Should Fail"},
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert update_response2.status_code == 403
+
+        # On Deal 2: Partner CAN read (viewer can read)
+        read_response2 = client.get(
+            f"/api/deals/{deal2_id}",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert read_response2.status_code == 200
+        assert read_response2.json()["title"] == "Deal 2 - Viewer Override"
+
+    def test_viewer_with_partner_override_can_write(self, client, test_db):
+        """A global Viewer with Partner override on a deal CAN write to that deal"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_dlp4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create viewer user (global role is viewer)
+        viewer = User(
+            email="viewer_dlp4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="viewer"
+        )
+        db.add(viewer)
+        db.commit()
+        db.refresh(viewer)
+
+        # Admin creates deal and adds viewer with partner role override
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp4@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Deal with Elevated Viewer"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Add viewer with partner role override
+        client.post(
+            f"/api/deals/{deal_id}/members",
+            json={"user_id": str(viewer.id), "role_override": "partner"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+
+        # Login as viewer
+        viewer_login = client.post(
+            "/api/auth/login",
+            json={"email": "viewer_dlp4@test.com", "password": "password123"}
+        )
+        viewer_token = viewer_login.json()["access_token"]
+
+        # Viewer with partner override CAN update the deal
+        update_response = client.put(
+            f"/api/deals/{deal_id}",
+            json={"title": "Viewer Modified via Override"},
+            headers={"Authorization": f"Bearer {viewer_token}"}
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["title"] == "Viewer Modified via Override"
+
+    def test_unassigned_user_cannot_access_deal_files_returns_403(self, client, test_db):
+        """Unassigned user cannot access files for a deal they're not a member of"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin who creates the deal
+        admin = User(
+            email="admin_dlp5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner who is NOT a member
+        unassigned_partner = User(
+            email="unassigned_dlp5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(unassigned_partner)
+        db.commit()
+
+        # Admin creates deal
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp5@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Deal with Files Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Login as unassigned partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "unassigned_dlp5@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # Try to list files - should get 403
+        files_response = client.get(
+            f"/api/deals/{deal_id}/files",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert files_response.status_code == 403
+
+        # Try to link a file - should get 403
+        link_response = client.post(
+            f"/api/deals/{deal_id}/files/link",
+            json={
+                "drive_file_id": "fake_drive_id",
+                "name": "test.pdf"
+            },
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert link_response.status_code == 403
+
+    def test_unassigned_user_cannot_access_deal_activity_returns_403(self, client, test_db):
+        """Unassigned user cannot access activity for a deal they're not a member of"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin who creates the deal
+        admin = User(
+            email="admin_dlp6@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create partner who is NOT a member
+        unassigned_partner = User(
+            email="unassigned_dlp6@test.com",
+            password_hash=get_password_hash("password123"),
+            role="partner"
+        )
+        db.add(unassigned_partner)
+        db.commit()
+
+        # Admin creates deal
+        admin_login = client.post(
+            "/api/auth/login",
+            json={"email": "admin_dlp6@test.com", "password": "password123"}
+        )
+        admin_token = admin_login.json()["access_token"]
+
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Deal Activity Test"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Login as unassigned partner
+        partner_login = client.post(
+            "/api/auth/login",
+            json={"email": "unassigned_dlp6@test.com", "password": "password123"}
+        )
+        partner_token = partner_login.json()["access_token"]
+
+        # Try to get deal activity - should get 403
+        activity_response = client.get(
+            f"/api/activity/deal/{deal_id}",
+            headers={"Authorization": f"Bearer {partner_token}"}
+        )
+        assert activity_response.status_code == 403
