@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 interface HeaderProps {
   user: {
@@ -134,6 +135,9 @@ export function Header({ user, onLogout, onSearch }: HeaderProps) {
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-2">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <BellIcon className="w-5 h-5" />

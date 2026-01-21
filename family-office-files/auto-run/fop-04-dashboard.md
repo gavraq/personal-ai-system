@@ -67,7 +67,7 @@
 - [x] Main: deal cards grid + activity feed sidebar ✓ Dashboard uses xl:grid-cols-3 with deals in col-span-2, activity feed in right column
 - [x] Mobile responsive (cards stack, activity below) ✓ grid-cols-1 on mobile, xl:grid-cols-3 on desktop; mobile menu overlay in Header
 - [x] Header: logo, search, notifications, user menu ✓ Created `Header.tsx` with search bar, notifications bell, user avatar menu, mobile hamburger
-- [ ] Dark/light mode toggle (optional P3)
+- [x] Dark/light mode toggle (optional P3) ✓ ThemeProvider context with localStorage persistence, ThemeToggle component in Header, 10 tests passing
 
 ## Phase 4 Completion
 
