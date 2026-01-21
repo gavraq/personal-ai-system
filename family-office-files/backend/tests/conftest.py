@@ -14,6 +14,7 @@ from app.models.base import Base
 
 # Import all models to register them with Base metadata
 from app.models.user import User, UserRole
+from app.models.deal import Deal, DealMember
 
 
 # Use test database (same PostgreSQL but different schema for isolation)
@@ -51,7 +52,7 @@ def test_db():
     yield
     # Clean up - truncate all tables to reset state
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE users CASCADE"))
+        conn.execute(text("TRUNCATE TABLE deal_members, deals, users CASCADE"))
         conn.commit()
 
 

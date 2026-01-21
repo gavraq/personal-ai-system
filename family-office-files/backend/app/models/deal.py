@@ -3,8 +3,8 @@ Deal/Transaction models for project organization
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy.orm import relationship
 import enum
 
@@ -18,6 +18,10 @@ class DealStatus(str, enum.Enum):
     CLOSED = "closed"
 
 
+# Create PostgreSQL ENUM type that maps to existing database enum
+deal_status_enum = ENUM('draft', 'active', 'closed', name='deal_status', create_type=False)
+
+
 class Deal(Base):
     """Deal/Transaction table"""
     __tablename__ = "deals"
@@ -26,8 +30,8 @@ class Deal(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text)
     status = Column(
-        Enum(DealStatus, name="deal_status", create_constraint=True),
-        default=DealStatus.DRAFT,
+        deal_status_enum,
+        default='draft',
         nullable=False
     )
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
