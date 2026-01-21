@@ -276,7 +276,6 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
                 <DrivePicker
                   dealId={deal.id}
                   onFilesLinked={handleFilesLinked}
-                  disabled={deal.status === 'closed'}
                 />
               )}
             </CardContent>

@@ -85,8 +85,9 @@ describe('ActivityFeed', () => {
     render(<ActivityFeed autoRefresh={false} />)
 
     await waitFor(() => {
-      // Check for actor email in descriptions
-      expect(screen.getByText(/admin@test.com/)).toBeInTheDocument()
+      // Check for actor email in descriptions (use getAllByText since email appears multiple times)
+      const elements = screen.getAllByText(/admin@test.com/)
+      expect(elements.length).toBeGreaterThan(0)
     })
   })
 

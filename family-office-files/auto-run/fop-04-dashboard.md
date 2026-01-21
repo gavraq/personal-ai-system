@@ -62,11 +62,11 @@
 
 ## 4.5 Dashboard Layout
 
-- [ ] Create responsive grid layout: sidebar + main content
-- [ ] Sidebar: navigation, user profile, quick stats
-- [ ] Main: deal cards grid + activity feed sidebar
-- [ ] Mobile responsive (cards stack, activity below)
-- [ ] Header: logo, search, notifications, user menu
+- [x] Create responsive grid layout: sidebar + main content ✓ Created `DashboardLayout.tsx` with CSS grid, sidebar fixed on lg+, content area with lg:pl-64
+- [x] Sidebar: navigation, user profile, quick stats ✓ Created `Sidebar.tsx` with NavItem links, user profile section, quick stats card
+- [x] Main: deal cards grid + activity feed sidebar ✓ Dashboard uses xl:grid-cols-3 with deals in col-span-2, activity feed in right column
+- [x] Mobile responsive (cards stack, activity below) ✓ grid-cols-1 on mobile, xl:grid-cols-3 on desktop; mobile menu overlay in Header
+- [x] Header: logo, search, notifications, user menu ✓ Created `Header.tsx` with search bar, notifications bell, user avatar menu, mobile hamburger
 - [ ] Dark/light mode toggle (optional P3)
 
 ## Phase 4 Completion

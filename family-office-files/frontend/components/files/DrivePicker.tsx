@@ -89,7 +89,7 @@ interface DrivePickerProps {
 export interface LinkedFile {
   id: string
   name: string
-  mime_type: string
+  mime_type: string | null
   size_bytes: number | null
   source: 'drive'
   source_id: string
@@ -186,12 +186,21 @@ export function DrivePicker({ dealId, onFilesLinked, disabled }: DrivePickerProp
             const linkedFiles: LinkedFile[] = []
 
             for (const doc of data.docs) {
-              const linkedFile = await filesApi.linkDriveFile(dealId, {
+              const response = await filesApi.linkDriveFile(dealId, {
                 drive_file_id: doc.id,
                 name: doc.name,
                 mime_type: doc.mimeType,
                 size_bytes: doc.sizeBytes || null,
               })
+              // Cast the response to LinkedFile since we know it's a drive file
+              const linkedFile: LinkedFile = {
+                id: response.id,
+                name: response.name,
+                mime_type: response.mime_type,
+                size_bytes: response.size_bytes,
+                source: 'drive',
+                source_id: response.source_id,
+              }
               linkedFiles.push(linkedFile)
             }
 
