@@ -13,7 +13,7 @@
 - [x] Create `backend/Dockerfile` with Python 3.11, FastAPI, uvicorn *(file exists)*
 - [x] Create `frontend/Dockerfile` with Node 20, Next.js dev server *(file exists)*
 - [x] Create `.env.example` with all required environment variables *(file exists with DB, JWT, Google, Anthropic vars)*
-- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED: Docker CLI commands intermittently hanging/timing out - 2026-01-21 14:05 UTC attempted build, CLI unresponsive. User action required: Restart Docker Desktop, then re-run this task)*
+- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:30 UTC: Docker CLI `version` works but container operations hang indefinitely. Process inspection shows multiple stuck docker compose/ps commands. User action required: Quit and restart Docker Desktop, then re-run this task. All prerequisite files verified: docker-compose.yml, Dockerfiles, requirements.txt, package.json, and app entry points are correctly configured.)*
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing`
 
 ## 1.2 Database Schema (feat-35)
