@@ -88,7 +88,7 @@
 - [x] Test: List shows both Drive and GCS files ✓ test_list_files_filter_by_source
 - [x] Test: Sort by date works ✓ test_list_files_sort_by_date_desc
 - [x] Test: Search filters results ✓ test_list_files_search_by_filename, test_list_files_search_no_results
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-16 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-16 passing` ✓
 
 **Note:** Implementation complete. Also created/updated:
 - `backend/app/routers/files.py` - Enhanced list_deal_files with sort_by, sort_order, search parameters
