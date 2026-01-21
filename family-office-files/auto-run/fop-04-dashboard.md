@@ -34,7 +34,7 @@
 - [x] Auto-refresh every 30 seconds or use WebSocket ✓ useEffect with setInterval at configurable refreshInterval (default 30s)
 - [x] Test: Activity appears after file upload within 5s ✓ `test_activity_logged_on_file_upload` in test_activity.py
 - [x] Test: Only shows activity from accessible deals ✓ `test_activity_feed_only_shows_accessible_deals` in test_activity.py
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-6 passing`
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-6 passing` ✓ Registry updated
 
 ## 4.3 Agent Output Summaries (feat-7)
 
