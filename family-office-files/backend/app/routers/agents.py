@@ -344,6 +344,7 @@ async def run_agent_in_background(
     from ..core.database import SessionLocal
     from ..agents.market_research import MarketResearchAgent
     from ..agents.document_analysis import DocumentAnalysisAgent
+    from ..agents.due_diligence import DueDiligenceAgent
 
     db = SessionLocal()
     try:
@@ -360,6 +361,9 @@ async def run_agent_in_background(
             output = await agent.execute(input_data)
         elif agent_type == AgentType.DOCUMENT_ANALYSIS:
             agent = DocumentAnalysisAgent(db, user_id, deal_id)
+            output = await agent.execute(input_data)
+        elif agent_type == AgentType.DUE_DILIGENCE:
+            agent = DueDiligenceAgent(db, user_id, deal_id)
             output = await agent.execute(input_data)
         else:
             # Fallback mock for agents not yet implemented

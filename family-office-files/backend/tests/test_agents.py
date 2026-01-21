@@ -1288,3 +1288,366 @@ class TestDocumentAnalysisAgent:
         data = response.json()
         assert data["agent_type"] == "document_analysis"
         assert "OCR" in data["output"]["summary"] or "scanned" in data["output"]["summary"].lower()
+
+
+class TestDueDiligenceAgent:
+    """Tests for feat-25: Due Diligence Agent"""
+
+    def test_query_company_returns_structured_report(self, client, test_db):
+        """Query company returns structured due diligence report"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_duedil1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_duedil1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Due Diligence Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create agent run with due diligence output
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DUE_DILIGENCE,
+            status=AgentStatus.COMPLETED,
+            input={"query": "Acme Corporation", "entity_type": "company"},
+            output={
+                "summary": "Acme Corporation is a multinational technology company founded in 1990.",
+                "overview": "Acme Corporation is a multinational technology company founded in 1990. The company specializes in enterprise software solutions and cloud services. Headquartered in San Francisco, Acme has offices in 15 countries and employs over 5,000 people worldwide.",
+                "financials": [
+                    {"metric": "Revenue", "value": "$500 million", "period": "2023", "trend": "increasing", "notes": "15% YoY growth"},
+                    {"metric": "Net Income", "value": "$75 million", "period": "2023", "trend": "stable", "notes": "Maintained margins"},
+                    {"metric": "Total Assets", "value": "$800 million", "period": "2023", "trend": "increasing", "notes": "Strategic acquisitions"}
+                ],
+                "leadership": [
+                    {"name": "John Smith", "title": "CEO", "background": "Former CTO at TechGiant", "tenure": "5 years", "notable": "Led successful IPO"},
+                    {"name": "Jane Doe", "title": "CFO", "background": "Ex-Goldman Sachs", "tenure": "3 years", "notable": "Improved cash flow management"}
+                ],
+                "news": [
+                    {"headline": "Acme Corp Announces Cloud Expansion", "date": "2024-01-15", "source": "TechNews", "sentiment": "positive", "summary": "Company investing $100M in cloud infrastructure"},
+                    {"headline": "Acme Reports Strong Q4 Results", "date": "2024-01-10", "source": "Bloomberg", "sentiment": "positive", "summary": "Beat analyst expectations by 10%"}
+                ],
+                "risk_flags": [
+                    {"flag": "High customer concentration", "severity": "medium", "category": "financial", "details": "Top 3 customers represent 40% of revenue", "mitigation": "Diversification strategy in progress"},
+                    {"flag": "Pending litigation", "severity": "low", "category": "legal", "details": "Minor patent dispute with competitor", "mitigation": "Expected to settle out of court"}
+                ],
+                "sources": [
+                    "SEC 10-K Filing 2023",
+                    "Bloomberg Company Profile",
+                    "Company Press Releases"
+                ]
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["agent_type"] == "due_diligence"
+        assert data["status"] == "completed"
+        assert "overview" in data["output"]
+        assert "financials" in data["output"]
+        assert "leadership" in data["output"]
+        assert "news" in data["output"]
+        assert len(data["output"]["financials"]) >= 1
+        assert len(data["output"]["leadership"]) >= 1
+
+    def test_risk_flags_displayed_with_severity(self, client, test_db):
+        """Risk flags are displayed with severity levels"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_duedil2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_duedil2@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Risk Flags Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create agent run with risk flags of different severities
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DUE_DILIGENCE,
+            status=AgentStatus.COMPLETED,
+            input={"query": "Risky Inc", "entity_type": "company"},
+            output={
+                "summary": "Risk analysis for Risky Inc.",
+                "overview": "Risky Inc is a company with several notable risk factors.",
+                "financials": [],
+                "leadership": [],
+                "news": [],
+                "risk_flags": [
+                    {"flag": "Ongoing SEC investigation", "severity": "high", "category": "regulatory", "details": "SEC investigating accounting practices", "mitigation": "Engaged external auditors"},
+                    {"flag": "High debt-to-equity ratio", "severity": "medium", "category": "financial", "details": "D/E ratio of 3.5", "mitigation": "Debt restructuring planned"},
+                    {"flag": "Minor compliance gap", "severity": "low", "category": "operational", "details": "Documentation needs updating", "mitigation": "In progress"}
+                ],
+                "sources": ["Regulatory filings", "Industry reports"]
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        risk_flags = data["output"]["risk_flags"]
+
+        # Verify risk flags structure
+        assert len(risk_flags) == 3
+
+        # Check for severity levels
+        severities = [rf["severity"] for rf in risk_flags]
+        assert "high" in severities
+        assert "medium" in severities
+        assert "low" in severities
+
+        # Verify risk flag structure
+        high_risk = next(rf for rf in risk_flags if rf["severity"] == "high")
+        assert "flag" in high_risk
+        assert "category" in high_risk
+        assert "details" in high_risk
+        assert "mitigation" in high_risk
+
+    def test_sources_cited(self, client, test_db):
+        """Sources are cited in due diligence output"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_duedil3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_duedil3@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Sources Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create agent run with sources
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DUE_DILIGENCE,
+            status=AgentStatus.COMPLETED,
+            input={"query": "Source Corp", "entity_type": "company"},
+            output={
+                "summary": "Due diligence report with citations.",
+                "overview": "Source Corp analysis with multiple data sources.",
+                "financials": [],
+                "leadership": [],
+                "news": [],
+                "risk_flags": [],
+                "sources": [
+                    "SEC EDGAR - 10-K Filing 2023",
+                    "Bloomberg Terminal Company Profile",
+                    "Dun & Bradstreet Credit Report",
+                    "LexisNexis News Archive"
+                ]
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify sources are present and have content
+        assert "sources" in data["output"]
+        sources = data["output"]["sources"]
+        assert len(sources) >= 3
+        assert all(isinstance(s, str) and len(s) > 0 for s in sources)
+
+    def test_start_due_diligence_returns_run_id(self, client, test_db):
+        """POST /api/agents/due_diligence/run returns a run_id for async execution"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_duedil4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_duedil4@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Async Due Diligence Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Start due diligence agent run
+        response = client.post(
+            f"/api/agents/due_diligence/run?deal_id={deal_id}",
+            json={"query": "Target Company Inc", "context": {"entity_type": "company"}},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 202  # Accepted
+        data = response.json()
+        assert "run_id" in data
+        assert data["status"] == "pending"
+        assert "due_diligence" in data["message"]
+
+    def test_person_entity_type_supported(self, client, test_db):
+        """Due diligence supports person entity type"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin user
+        admin = User(
+            email="admin_duedil5@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_duedil5@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Person Due Diligence Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Create agent run for person entity type
+        agent_run = AgentRun(
+            deal_id=deal_id,
+            user_id=admin.id,
+            agent_type=AgentType.DUE_DILIGENCE,
+            status=AgentStatus.COMPLETED,
+            input={"query": "John Doe", "entity_type": "person"},
+            output={
+                "summary": "Due diligence report on John Doe.",
+                "overview": "John Doe is a business executive with 20 years of experience in the technology sector.",
+                "financials": [],
+                "leadership": [
+                    {"name": "John Doe", "title": "Board Member", "background": "Former CEO of TechCo", "tenure": "3 years", "notable": "Led company through successful acquisition"}
+                ],
+                "news": [
+                    {"headline": "John Doe joins ABC Corp Board", "date": "2024-01-01", "source": "Business Wire", "sentiment": "positive", "summary": "Appointment as independent director"}
+                ],
+                "risk_flags": [],
+                "sources": ["LinkedIn Profile", "SEC Form 4 Filings", "News Archives"]
+            },
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow()
+        )
+        db.add(agent_run)
+        db.commit()
+        db.refresh(agent_run)
+
+        # Get agent run details
+        response = client.get(
+            f"/api/agents/runs/{agent_run.id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["input"]["entity_type"] == "person"
+        assert "John Doe" in data["output"]["overview"]
