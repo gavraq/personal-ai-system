@@ -5,6 +5,8 @@ Main application entry point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers import auth_router
+
 app = FastAPI(
     title="Family Office Files API",
     description="Collaboration platform for Family Office Partnership",
@@ -31,3 +33,7 @@ async def root():
 async def health_check():
     """Health check endpoint for Docker healthcheck"""
     return {"status": "healthy"}
+
+
+# Include routers
+app.include_router(auth_router)

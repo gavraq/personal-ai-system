@@ -3,8 +3,8 @@ User model for authentication and authorization
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Enum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy.orm import relationship
 import enum
 
@@ -18,6 +18,10 @@ class UserRole(str, enum.Enum):
     VIEWER = "viewer"
 
 
+# Create PostgreSQL ENUM type that maps to existing database enum
+user_role_enum = ENUM('admin', 'partner', 'viewer', name='user_role', create_type=False)
+
+
 class User(Base):
     """User table for authentication"""
     __tablename__ = "users"
@@ -26,8 +30,8 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(
-        Enum(UserRole, name="user_role", create_constraint=True),
-        default=UserRole.VIEWER,
+        user_role_enum,
+        default='viewer',
         nullable=False
     )
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
