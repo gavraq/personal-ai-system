@@ -13,16 +13,16 @@
 - [x] Create `backend/Dockerfile` with Python 3.11, FastAPI, uvicorn *(file exists)*
 - [x] Create `frontend/Dockerfile` with Node 20, Next.js dev server *(file exists)*
 - [x] Create `.env.example` with all required environment variables *(file exists with DB, JWT, Google, Anthropic vars)*
-- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 15:25 UTC: Loop 00010 - Docker CLI STILL UNRESPONSIVE. `docker info` command timed out after 15 seconds. Docker daemon remains hung. **USER ACTION REQUIRED - CANNOT PROCEED**: 1) Quit Docker Desktop via menu bar → "Quit Docker Desktop", 2) Force quit if needed: `killall Docker && killall "Docker Desktop"`, 3) Wait 15 seconds, 4) Restart Docker Desktop from /Applications, 5) Wait for green "running" status, 6) Test with `docker info` (should complete in <5 seconds), 7) Re-run Maestro.)*
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing`
+- [x] Run `docker-compose up --build` and verify all services start *(COMPLETED 2026-01-21 15:47 UTC: All 4 services running - frontend:3000, backend:8000, db:5433, redis:6379)*
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing` *(DONE)*
 
 ## 1.2 Database Schema (feat-35)
 
-- [ ] Create `backend/alembic/` directory for migrations
-- [ ] Create initial migration with all tables: users, deals, deal_members, files, file_shares, google_connections, agent_runs, agent_messages, audit_log, activity
-- [ ] Run migration against Docker PostgreSQL
-- [ ] Verify tables created with `\dt` in psql
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-35 passing`
+- [x] Create `backend/alembic/` directory for migrations *(COMPLETED 2026-01-21: Created alembic/ with env.py, script.py.mako, and versions/)*
+- [x] Create initial migration with all tables: users, deals, deal_members, files, file_shares, google_connections, agent_runs, agent_messages, audit_log, activity *(COMPLETED 2026-01-21: Migration 001_initial_schema.py with all 10 tables + 7 enum types + 9 indexes)*
+- [x] Run migration against Docker PostgreSQL *(COMPLETED 2026-01-21: `alembic upgrade head` successful)*
+- [x] Verify tables created with `\dt` in psql *(COMPLETED 2026-01-21: All 10 tables + alembic_version verified)*
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-35 passing` *(DONE)*
 
 ## 1.3 User Registration (feat-1)
 

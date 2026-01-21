@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - fop-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://fop_user:fop_password@db:5432/fop_db
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRY_MINUTES=15
+      - REFRESH_TOKEN_EXPIRY_DAYS=7
+      - REDIS_URL=redis://redis:6379/0
+      - GCS_BUCKET=${GCS_BUCKET:-fop-files}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=http://localhost:8000/api/integrations/google/callback
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - fop-network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=fop_user
+      - POSTGRES_PASSWORD=fop_password
+      - POSTGRES_DB=fop_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fop_user -d fop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fop-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fop-network
+
+networks:
+  fop-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
