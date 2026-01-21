@@ -340,13 +340,12 @@ async def run_agent_in_background(
     Background task to execute agent.
     Creates a new database session for the background task.
     """
+    from datetime import datetime
     from ..core.database import SessionLocal
-    from ..agents.base import BaseAgent
+    from ..agents.market_research import MarketResearchAgent
 
     db = SessionLocal()
     try:
-        # Import agent implementations here to avoid circular imports
-        # For now, we'll use a mock agent that simulates work
         agent_run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
         if not agent_run:
             return
@@ -354,23 +353,35 @@ async def run_agent_in_background(
         agent_run.status = AgentStatus.RUNNING
         db.commit()
 
-        # Simulate agent execution (will be replaced with real implementations)
-        await asyncio.sleep(1)  # Simulate processing time
-
-        # Mock successful output based on agent type
-        output = {
-            "summary": f"Analysis completed for {agent_type.value}",
-            "details": {
-                "query": input_data.get("query", ""),
-                "agent_type": agent_type.value
-            },
-            "sources": []
-        }
+        # Route to appropriate agent implementation
+        if agent_type == AgentType.MARKET_RESEARCH:
+            agent = MarketResearchAgent(db, user_id, deal_id)
+            output = await agent.execute(input_data)
+        else:
+            # Fallback mock for agents not yet implemented
+            await asyncio.sleep(1)  # Simulate processing time
+            output = {
+                "summary": f"Analysis completed for {agent_type.value}",
+                "details": {
+                    "query": input_data.get("query", ""),
+                    "agent_type": agent_type.value
+                },
+                "sources": []
+            }
 
         agent_run.status = AgentStatus.COMPLETED
         agent_run.output = output
-        from datetime import datetime
         agent_run.completed_at = datetime.utcnow()
+        db.commit()
+
+        # Add assistant message with the summary
+        assistant_message = AgentMessage(
+            agent_run_id=agent_run.id,
+            role="assistant",
+            content=output.get("summary", str(output)),
+            created_at=datetime.utcnow()
+        )
+        db.add(assistant_message)
         db.commit()
 
     except Exception as e:
