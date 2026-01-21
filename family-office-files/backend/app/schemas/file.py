@@ -1,0 +1,57 @@
+"""
+Pydantic schemas for file operations
+"""
+from datetime import datetime
+from typing import Optional, List
+from uuid import UUID
+from pydantic import BaseModel, Field
+from enum import Enum
+
+
+class FileSourceEnum(str, Enum):
+    """File source type"""
+    DRIVE = "drive"
+    GCS = "gcs"
+
+
+class LinkDriveFileRequest(BaseModel):
+    """Request to link a Google Drive file to a deal"""
+    drive_file_id: str = Field(..., description="Google Drive file ID")
+    name: str = Field(..., description="File name", max_length=255)
+    mime_type: Optional[str] = Field(None, description="MIME type of the file", max_length=100)
+    size_bytes: Optional[int] = Field(None, description="File size in bytes", ge=0)
+
+
+class FileResponse(BaseModel):
+    """Response model for file metadata"""
+    id: UUID
+    deal_id: UUID
+    name: str
+    source: FileSourceEnum
+    source_id: Optional[str] = None
+    mime_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    uploaded_by: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FileListResponse(BaseModel):
+    """Response model for list of files"""
+    files: List[FileResponse]
+    total: int
+
+
+class LinkDriveFileResponse(BaseModel):
+    """Response model for linking a Drive file"""
+    id: UUID
+    name: str
+    mime_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    source: str = "drive"
+    source_id: str
+
+    class Config:
+        from_attributes = True

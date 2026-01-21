@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge, EditDealModal, MemberManager } from '@/components/deals'
-import { dealsApi, Deal } from '@/lib/api'
+import { DrivePicker, LinkedFile } from '@/components/files'
+import { dealsApi, filesApi, Deal, DealFile } from '@/lib/api'
 import { useAuthStore } from '@/lib/auth'
 import { authApi } from '@/lib/api'
 
@@ -32,6 +33,8 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [memberModalOpen, setMemberModalOpen] = useState(false)
+  const [files, setFiles] = useState<DealFile[]>([])
+  const [filesLoading, setFilesLoading] = useState(false)
 
   // Load user data if not already loaded
   useEffect(() => {
@@ -79,6 +82,35 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
 
   const handleDealUpdated = (updatedDeal: Deal) => {
     setDeal(updatedDeal)
+  }
+
+  // Load files when deal is loaded
+  useEffect(() => {
+    const loadFiles = async () => {
+      if (!deal) return
+      setFilesLoading(true)
+      try {
+        const response = await filesApi.list(deal.id)
+        setFiles(response.files)
+      } catch {
+        // Silently fail - files section will show empty
+      } finally {
+        setFilesLoading(false)
+      }
+    }
+
+    if (deal) {
+      loadFiles()
+    }
+  }, [deal])
+
+  const handleFilesLinked = (linkedFiles: LinkedFile[]) => {
+    // Refresh file list
+    if (deal) {
+      filesApi.list(deal.id).then((response) => {
+        setFiles(response.files)
+      })
+    }
   }
 
   const handleDelete = async () => {
@@ -208,10 +240,45 @@ export default function DealDetailPage({ params }: DealDetailPageProps) {
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Files</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                File management coming soon...
-              </p>
+            <CardContent className="space-y-4">
+              {/* File list */}
+              {filesLoading ? (
+                <p className="text-muted-foreground">Loading files...</p>
+              ) : files.length === 0 ? (
+                <p className="text-muted-foreground">No files attached yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {files.map((file) => (
+                    <li key={file.id} className="flex items-center gap-2 text-sm">
+                      {file.source === 'drive' ? (
+                        <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M4.433 22.396l4-6.928H24l-4 6.928H4.433zM15.653 15.468l-4-6.928 4-6.929 4 6.929-4 6.928zM1.545 15.468L5.545 8.54l4 6.928H1.545z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      )}
+                      <span className="truncate">{file.name}</span>
+                      {file.size_bytes && (
+                        <span className="text-muted-foreground text-xs">
+                          ({Math.round(file.size_bytes / 1024)} KB)
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Drive picker - only show for non-closed deals and non-viewers */}
+              {deal && deal.status !== 'closed' && user?.role !== 'viewer' && (
+                <DrivePicker
+                  dealId={deal.id}
+                  onFilesLinked={handleFilesLinked}
+                  disabled={deal.status === 'closed'}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

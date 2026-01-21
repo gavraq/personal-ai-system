@@ -16,6 +16,7 @@ from app.models.base import Base
 from app.models.user import User, UserRole
 from app.models.deal import Deal, DealMember
 from app.models.google import GoogleConnection
+from app.models.file import File, FileShare
 
 
 # Use test database (same PostgreSQL but different schema for isolation)
@@ -50,10 +51,14 @@ def test_db():
     """Create test database tables before each test and clean up after"""
     # Create tables
     Base.metadata.create_all(bind=engine)
-    yield
-    # Clean up - truncate all tables to reset state
+    # Clean up BEFORE test - ensure fresh state
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE google_connections, deal_members, deals, users CASCADE"))
+        conn.execute(text("TRUNCATE TABLE agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
+        conn.commit()
+    yield
+    # Clean up AFTER test as well
+    with engine.connect() as conn:
+        conn.execute(text("TRUNCATE TABLE agent_messages, agent_runs, activity, audit_log, file_shares, files, google_connections, deal_members, deals, users CASCADE"))
         conn.commit()
 
 

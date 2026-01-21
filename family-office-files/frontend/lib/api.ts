@@ -216,4 +216,60 @@ export const dealsApi = {
   },
 }
 
+// File API types
+export type FileSource = 'drive' | 'gcs'
+
+export interface DealFile {
+  id: string
+  deal_id: string
+  name: string
+  source: FileSource
+  source_id: string | null
+  mime_type: string | null
+  size_bytes: number | null
+  uploaded_by: string
+  created_at: string
+}
+
+export interface FileListResponse {
+  files: DealFile[]
+  total: number
+}
+
+export interface LinkDriveFileRequest {
+  drive_file_id: string
+  name: string
+  mime_type?: string
+  size_bytes?: number | null
+}
+
+export interface LinkDriveFileResponse {
+  id: string
+  name: string
+  mime_type: string | null
+  size_bytes: number | null
+  source: string
+  source_id: string
+}
+
+// File API methods
+export const filesApi = {
+  list: async (dealId: string, source?: FileSource): Promise<FileListResponse> => {
+    const params = new URLSearchParams()
+    if (source) {
+      params.append('source', source)
+    }
+    const url = params.toString()
+      ? `/api/deals/${dealId}/files?${params.toString()}`
+      : `/api/deals/${dealId}/files`
+    const response = await api.get<FileListResponse>(url)
+    return response.data
+  },
+
+  linkDriveFile: async (dealId: string, data: LinkDriveFileRequest): Promise<LinkDriveFileResponse> => {
+    const response = await api.post<LinkDriveFileResponse>(`/api/deals/${dealId}/files/link`, data)
+    return response.data
+  },
+}
+
 export default api
