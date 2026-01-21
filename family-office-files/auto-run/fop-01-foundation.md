@@ -13,7 +13,7 @@
 - [x] Create `backend/Dockerfile` with Python 3.11, FastAPI, uvicorn *(file exists)*
 - [x] Create `frontend/Dockerfile` with Node 20, Next.js dev server *(file exists)*
 - [x] Create `.env.example` with all required environment variables *(file exists with DB, JWT, Google, Anthropic vars)*
-- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:41 UTC: Docker CLI still unresponsive. `docker version` command hangs indefinitely (PID 94860 observed in zombie state). Docker Desktop processes running (com.docker.backend, com.docker.virtualization) but CLI-to-daemon socket communication broken. **User action required**: Quit Docker Desktop completely via menu bar icon → "Quit Docker Desktop", wait 10 seconds, restart Docker Desktop, wait for "Docker Desktop is running" notification, then re-run this task.)*
+- [ ] Run `docker-compose up --build` and verify all services start *(BLOCKED 2026-01-21 14:42 UTC: Docker CLI still unresponsive. `docker version` returns client info slowly but `docker info` hangs indefinitely - daemon socket communication broken. Docker Desktop processes running but CLI-to-daemon pipe frozen. **User action required**: Quit Docker Desktop completely via menu bar icon → "Quit Docker Desktop", wait 10 seconds, restart Docker Desktop, wait for "Docker Desktop is running" notification, then re-run this task.)*
 - [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-34 passing`
 
 ## 1.2 Database Schema (feat-35)
