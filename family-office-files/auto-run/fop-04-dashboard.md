@@ -5,22 +5,22 @@
 **Depends on**: Phase 3 (Files)
 
 ## Pre-requisites
-- [ ] Phase 3 complete (files working)
-- [ ] Deals and files populated for testing
+- [x] Phase 3 complete (files working) ✓ All 6 features (feat-13 through feat-18) verified passing
+- [x] Deals and files populated for testing ✓ Test infrastructure in place (test_deals.py, test_files.py)
 
 ## 4.1 Deal Overview Cards (feat-5)
 
-- [ ] Create `frontend/app/dashboard/page.tsx` as main dashboard
-- [ ] Create `frontend/components/dashboard/DealCard.tsx` component
-- [ ] Display: title, status badge, file count, last activity date
-- [ ] Filter cards by user's deal access permissions
-- [ ] Click card navigates to `/deals/{id}`
-- [ ] Status badge colors: draft=gray, active=green, closed=red
-- [ ] Sort deals by last activity (most recent first)
-- [ ] Test: Dashboard loads with all accessible deal cards
-- [ ] Test: Click card navigates to deal detail
-- [ ] Test: Only assigned deals visible (permission filtering)
-- [ ] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-5 passing`
+- [x] Create `frontend/app/dashboard/page.tsx` as main dashboard ✓ Already exists with full implementation
+- [x] Create `frontend/components/dashboard/DealCard.tsx` component ✓ Located at `frontend/components/deals/DealCard.tsx`
+- [x] Display: title, status badge, file count, last activity date ✓ All fields displayed in DealCard component
+- [x] Filter cards by user's deal access permissions ✓ Backend filters via DealMember join for non-admin users
+- [x] Click card navigates to `/deals/{id}` ✓ Uses Next.js Link component with dynamic href
+- [x] Status badge colors: draft=gray, active=green, closed=red ✓ StatusBadge.tsx has correct color mapping
+- [x] Sort deals by last activity (most recent first) ✓ Backend orders by updated_at desc nullslast, then created_at desc
+- [x] Test: Dashboard loads with all accessible deal cards ✓ test_dashboard_loads_with_deal_cards in test_deals.py
+- [x] Test: Click card navigates to deal detail ✓ DealCard.test.tsx verifies Link href attribute
+- [x] Test: Only assigned deals visible (permission filtering) ✓ test_only_assigned_deals_visible_for_viewer in test_deals.py
+- [x] Update registry: `bun .claude/skills/CORE/Tools/FeatureRegistry.ts update family-office-files feat-5 passing` ✓ Registry updated
 
 ## 4.2 Recent Activity Feed (feat-6)
 
