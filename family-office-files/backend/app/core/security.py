@@ -41,8 +41,15 @@ def create_access_token(user_id: UUID) -> str:
         "sub": str(user_id),
         "exp": expire,
         "type": "access",
-        "jti": str(uuid4()),  # Unique token ID for blacklist tracking
-        "iat": now.timestamp()  # Issued at timestamp
+        # jti (JWT ID): Unique identifier for this specific token.
+        # Used for individual token blacklisting on logout - we can invalidate
+        # this exact token without affecting user's other sessions.
+        "jti": str(uuid4()),
+        # iat (issued at): Timestamp when token was created.
+        # Used for user-level blacklisting: when a user changes their password,
+        # we store a blacklist timestamp and any token with iat < that timestamp
+        # is considered invalid. This invalidates ALL existing tokens for security.
+        "iat": now.timestamp()
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
@@ -50,6 +57,10 @@ def create_access_token(user_id: UUID) -> str:
 def create_refresh_token(user_id: UUID) -> str:
     """
     Create a JWT refresh token for a user.
+
+    Refresh tokens have longer expiry (7 days) and are used to obtain new access
+    tokens without re-authentication. They use the same jti/iat pattern for
+    blacklisting support (see create_access_token comments for details).
 
     Args:
         user_id: The user's UUID
@@ -63,8 +74,8 @@ def create_refresh_token(user_id: UUID) -> str:
         "sub": str(user_id),
         "exp": expire,
         "type": "refresh",
-        "jti": str(uuid4()),  # Unique token ID for blacklist tracking
-        "iat": now.timestamp()  # Issued at timestamp
+        "jti": str(uuid4()),  # Individual token blacklist ID
+        "iat": now.timestamp()  # For user-level blacklist comparison
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
@@ -91,14 +102,19 @@ def verify_token(token: str, token_type: str = "access", check_blacklist: bool =
         jti = payload.get("jti", "")
         iat = payload.get("iat", 0)
 
-        # Check if token is blacklisted
+        # Two-level token blacklist check:
+        # 1. Individual token blacklist (jti) - for single logout
+        # 2. User-level blacklist (iat comparison) - for password change / forced logout all
         if check_blacklist and jti:
             from .token_blacklist import is_token_blacklisted, get_user_blacklist_timestamp
 
+            # Level 1: Check if this specific token was blacklisted (e.g., on logout)
             if is_token_blacklisted(jti):
                 return None
 
-            # Check user-level blacklist
+            # Level 2: Check user-level blacklist for "invalidate all tokens" scenarios
+            # (password change, security breach, admin forced logout)
+            # Any token issued BEFORE the user's blacklist timestamp is invalid.
             user_blacklist_time = get_user_blacklist_timestamp(payload["sub"])
             if user_blacklist_time:
                 token_issued = datetime.fromtimestamp(iat) if iat else datetime.min

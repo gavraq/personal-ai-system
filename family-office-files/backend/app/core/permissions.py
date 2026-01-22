@@ -34,6 +34,9 @@ class RoleLevel(IntEnum):
 
 
 # Map string role values to RoleLevel
+# NOTE: Maps both string literals ('admin', 'partner', 'viewer') AND UserRole enum values
+# because different parts of the codebase pass different formats. This ensures compatibility
+# across internal operations (using enums) and external APIs (using strings).
 ROLE_LEVEL_MAP = {
     'viewer': RoleLevel.VIEWER,
     'partner': RoleLevel.PARTNER,
@@ -95,12 +98,18 @@ def _get_deal_membership_with_cache(db: Session, deal_id: UUID, user_id: UUID) -
     Returns:
         DealMember object or None if not a member
     """
-    # Try cache first
+    # Try cache first for quick membership status check
     cached = get_cached_deal_membership(deal_id, user_id)
     if cached is not None:
         if not cached["is_member"]:
             return None
-        # We have membership info cached - still need to fetch from DB for SQLAlchemy
+        # IMPORTANT: Even on cache hit, we must fetch the actual ORM object from DB.
+        # The cache only stores a dict with is_member and role_override - not the full
+        # SQLAlchemy object. We need the ORM object attached to the session for:
+        # 1. Lazy loading of relationships to work
+        # 2. SQLAlchemy session tracking and identity map consistency
+        # 3. Any future attribute access that requires DB state
+        # The cache validation confirms membership exists before the (now guaranteed) DB query.
         membership = db.query(DealMember).filter(
             DealMember.deal_id == deal_id,
             DealMember.user_id == user_id
@@ -128,10 +137,17 @@ def get_effective_deal_role(db: Session, deal: Deal, user: User) -> str:
     """
     Get user's effective role for a specific deal.
 
-    Role resolution order:
-    1. If user is admin -> admin (global bypass)
+    Role resolution order (three-tier hierarchy):
+    1. If user is admin -> admin (global bypass, skips membership check entirely)
     2. If user has deal membership with role_override -> role_override
     3. Otherwise -> user's global role
+
+    This allows flexible permission models:
+    - A Partner can be granted Viewer-only access to sensitive deals (role_override = 'viewer')
+    - A Viewer can be temporarily elevated to Partner on specific deals (role_override = 'partner')
+    - Admins always have full access regardless of membership
+
+    Uses cache to avoid N+1 queries when checking multiple users/deals.
 
     Args:
         db: Database session
@@ -141,17 +157,18 @@ def get_effective_deal_role(db: Session, deal: Deal, user: User) -> str:
     Returns:
         The effective role string for this user on this deal
     """
-    # Admin always has admin access
+    # Admin always has admin access - bypass membership lookup entirely for performance
     if user.role == UserRole.ADMIN.value:
         return UserRole.ADMIN.value
 
-    # Check for deal membership with role override (using cache)
+    # Check for deal membership with role override (using cache to avoid N+1)
     membership = _get_deal_membership_with_cache(db, deal.id, user.id)
 
+    # Deal-level override takes precedence over global role when present
     if membership and membership.role_override:
         return membership.role_override
 
-    # Fall back to global role
+    # Fall back to global role (from user record)
     return user.role
 
 

@@ -31,11 +31,16 @@ def _get_user_with_cache(db: Session, user_id: UUID) -> Optional[User]:
     Returns:
         User object or None if not found
     """
-    # Try cache first
+    # Try cache first for quick existence check
     cached = get_cached_user(user_id)
     if cached:
-        # Reconstruct User object from cached data
-        # Note: We still need to attach to session for SQLAlchemy to work
+        # IMPORTANT: Even on cache hit, we fetch from DB. This is NOT redundant.
+        # The cache stores user data as a dict, not an SQLAlchemy ORM object.
+        # We need the actual ORM object attached to the DB session for:
+        # 1. Lazy loading of relationships (e.g., user.deals)
+        # 2. Session identity map consistency (SQLAlchemy tracks objects)
+        # 3. Future DB operations that require a managed entity
+        # The cache validates the user exists before this (now guaranteed) DB hit.
         user = db.query(User).filter(User.id == user_id).first()
         return user
 
@@ -59,6 +64,10 @@ def require_role(allowed_roles: List[UserRole]):
     """
     Dependency factory to check if current user has one of the allowed roles.
 
+    This uses the factory pattern: returns a closure (role_checker) that captures
+    the allowed_roles list. Each call to require_role([...]) creates a new closure
+    with its own allowed_roles, enabling flexible per-endpoint role requirements.
+
     Args:
         allowed_roles: List of UserRole values that are allowed
 
@@ -74,6 +83,7 @@ def require_role(allowed_roles: List[UserRole]):
         async def endpoint(current_user: User = Depends(require_role([UserRole.ADMIN]))):
             ...
     """
+    # Factory pattern: role_checker closes over allowed_roles
     async def role_checker(
         credentials: HTTPAuthorizationCredentials = Depends(security),
         db: Session = Depends(get_db)

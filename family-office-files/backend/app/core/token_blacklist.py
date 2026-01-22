@@ -48,11 +48,14 @@ def blacklist_token(jti: str, exp: datetime) -> bool:
     try:
         client = get_redis_client()
 
-        # Calculate TTL (seconds until expiration)
+        # Calculate TTL (seconds until token expiration)
         now = datetime.utcnow()
         ttl_seconds = int((exp - now).total_seconds())
 
-        # Only blacklist if token hasn't expired
+        # Edge case: If token is already expired (TTL <= 0), skip blacklisting.
+        # Expired tokens are already invalid due to exp claim validation, so there's
+        # no security benefit to blacklisting them. Return True (success) since the
+        # intended outcome (token invalid) is already achieved.
         if ttl_seconds <= 0:
             return True  # Token already expired, no need to blacklist
 
@@ -81,8 +84,14 @@ def is_token_blacklisted(jti: str) -> bool:
         key = f"blacklist:{jti}"
         return client.exists(key) > 0
     except redis.RedisError:
-        # On Redis error, fail open (allow token) to prevent DoS
-        # In production, you might want to fail closed instead
+        # SECURITY TRADE-OFF: Fail OPEN (allow token) on Redis errors.
+        #
+        # Rationale: If we fail CLOSED (reject all tokens when Redis is down),
+        # an attacker could DoS our Redis server to lock out all users. By failing
+        # OPEN, we trade degraded security for availability.
+        #
+        # Alternative: In high-security environments, you may want to fail CLOSED
+        # and accept the DoS risk. This decision should be based on your threat model.
         return False
 
 
@@ -103,9 +112,13 @@ def blacklist_all_user_tokens(user_id: str, until: datetime) -> bool:
     try:
         client = get_redis_client()
 
-        # Store the timestamp - any token with iat < this is invalid
+        # Store the timestamp - any token with iat < this timestamp is invalid
         key = f"user_blacklist:{user_id}"
-        # Keep for max refresh token lifetime (7 days)
+        # TTL = max refresh token lifetime (7 days).
+        # Why 7 days? This is the maximum lifetime of any token the user might have.
+        # After 7 days, all their tokens will have naturally expired anyway, so we
+        # can discard the blacklist entry. This prevents Redis from accumulating
+        # stale blacklist entries indefinitely.
         ttl_seconds = settings.refresh_token_expiry_days * 24 * 60 * 60
         client.setex(key, ttl_seconds, until.isoformat())
 

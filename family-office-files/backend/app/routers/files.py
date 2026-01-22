@@ -76,12 +76,22 @@ def can_delete_files(db: Session, deal: Deal, user: User) -> bool:
 
 
 def can_access_file(db: Session, file: File, user: User) -> bool:
-    """Check if user can access a file (member of associated deal, admin, or shared with user)"""
-    # Admin can access all files
+    """Check if user can access a file (member of associated deal, admin, or shared with user)
+
+    Three-level access check with early returns for performance:
+    1. Admin bypass - admins access everything
+    2. Direct file share - cross-FO sharing (file shared directly to user)
+    3. Deal membership - user is member of the deal containing this file
+
+    The order matters: admin check is cheapest (no DB), file share is next
+    (single query), deal membership is most expensive (may cascade).
+    """
+    # Level 1: Admin can access all files (cheapest check - no DB query)
     if user.role == UserRole.ADMIN.value:
         return True
 
-    # Check if user has a direct file share
+    # Level 2: Check if user has a direct file share (cross-FO sharing bypass)
+    # This allows sharing specific files with users who aren't deal members
     share = db.query(FileShare).filter(
         FileShare.file_id == file.id,
         FileShare.shared_with == user.id
@@ -89,7 +99,7 @@ def can_access_file(db: Session, file: File, user: User) -> bool:
     if share is not None:
         return True
 
-    # Check if user is a member of the associated deal
+    # Level 3: Check if user is a member of the associated deal
     deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
     if deal is None:
         return False
@@ -103,23 +113,29 @@ def can_download_file(db: Session, file: File, user: User) -> bool:
     - Admin role, OR
     - Deal membership (any role can download), OR
     - File share with 'download' or 'edit' permission
+
+    Note: This is stricter than can_access_file for file shares:
+    - VIEW permission allows seeing file metadata but NOT downloading
+    - DOWNLOAD and EDIT permissions allow actual file download
+    This distinction enables "preview-only" sharing for sensitive documents.
     """
     # Admin can download all files
     if user.role == UserRole.ADMIN.value:
         return True
 
-    # Check if user is a member of the associated deal
+    # Deal members can always download (even viewers) - deal membership implies trust
     deal = db.query(Deal).filter(Deal.id == file.deal_id).first()
     if deal and can_access_deal(db, deal, user):
         return True
 
-    # Check if user has a file share with download or edit permission
+    # File share permission check - VIEW is NOT sufficient for download
+    # This allows granular control: share file metadata without full download access
     share = db.query(FileShare).filter(
         FileShare.file_id == file.id,
         FileShare.shared_with == user.id
     ).first()
     if share is not None:
-        # VIEW permission doesn't allow download, DOWNLOAD and EDIT do
+        # Business rule: VIEW = read-only metadata, DOWNLOAD/EDIT = full access
         return share.permission in [FilePermission.DOWNLOAD, FilePermission.EDIT]
 
     return False
@@ -398,8 +414,10 @@ async def list_deal_files(
     # Get total count before pagination
     total = query.count()
 
-    # Determine sort column
-    sort_column = File.created_at  # default
+    # Map sort_by parameter to SQLAlchemy column for dynamic sorting
+    # Using if-elif chain (not dict lookup) because SQLAlchemy columns aren't
+    # consistently hashable across ORM versions, and this is clearer for 3 options.
+    sort_column = File.created_at  # default to date (most recent first)
     if sort_by == "name":
         sort_column = File.name
     elif sort_by == "type":
@@ -621,14 +639,18 @@ async def share_file(
         FileShare.shared_with == request.user_id
     ).first()
 
+    # File share upsert logic:
+    # - If share already exists: UPDATE permission level only (no audit, it's a change)
+    # - If new share: CREATE and log to audit (new access grant)
+    # This allows re-granting with different permission without duplicate audit entries.
     if existing_share:
-        # Update existing share with new permission
+        # Update existing share with new permission (permission change, not new share)
         existing_share.permission = FilePermission(request.permission.value)
         db.commit()
         db.refresh(existing_share)
         share = existing_share
     else:
-        # Create new file share
+        # Create new file share (new access grant - audit this)
         share = FileShare(
             file_id=file_id,
             shared_with=request.user_id,
@@ -636,7 +658,7 @@ async def share_file(
         )
         db.add(share)
 
-        # Log to audit log
+        # Log to audit log - only for NEW shares, not permission updates
         log_file_share(
             db=db,
             actor=current_user,
@@ -758,14 +780,16 @@ async def list_shared_files(
         FileShare.shared_with == current_user.id
     ).count()
 
-    # Get paginated file shares with eager loading of file relationship (avoids N+1)
+    # Eager load FileShare.file relationship to prevent N+1 query problem.
+    # Without joinedload: 1 query for shares + N queries for each share's file = O(N+1)
+    # With joinedload: 1 query with JOIN = O(1) query complexity
     shares = db.query(FileShare).options(
         joinedload(FileShare.file)
     ).filter(
         FileShare.shared_with == current_user.id
     ).order_by(FileShare.shared_at.desc()).offset(offset).limit(page_size).all()
 
-    # Build response using eagerly loaded file data (no N+1)
+    # Build response using eagerly loaded file data (all data already fetched above)
     shared_files = [
         SharedFileResponse(
             id=share.file.id,

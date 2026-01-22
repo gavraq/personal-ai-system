@@ -48,7 +48,12 @@ class StorageService:
 
     @property
     def client(self) -> storage.Client:
-        """Lazy initialization of GCS client"""
+        """Lazy initialization of GCS client.
+
+        Defers GCS authentication until first actual use, allowing app startup
+        without GCS credentials configured (useful for local dev, testing).
+        Client is singleton per StorageService instance - created once, reused.
+        """
         if self._client is None:
             self._client = storage.Client()
         return self._client
@@ -101,7 +106,11 @@ class StorageService:
         Returns:
             GCS object path
         """
-        # Sanitize filename to prevent path traversal
+        # SECURITY: Path traversal prevention using os.path.basename()
+        # Strips directory components from filename, so malicious inputs like
+        # "../../etc/passwd" become just "passwd". This prevents attackers from
+        # writing files outside the intended deal directory structure.
+        # Always apply this sanitization before constructing any GCS paths.
         safe_filename = os.path.basename(filename)
         return f"deals/{deal_id}/{file_id}/{safe_filename}"
 
@@ -150,10 +159,12 @@ class StorageService:
         """
         blob = self.bucket.blob(gcs_path)
 
-        # Set response disposition for download
+        # HTTP Content-Disposition header controls browser behavior:
+        # - 'attachment': Forces download dialog (prevents inline viewing of PDFs, etc.)
+        # - filename parameter: Suggests filename for the downloaded file
+        # This is important for security (no inline execution) and UX (meaningful filenames).
         response_disposition = None
         if for_download:
-            # Extract filename from path
             filename = os.path.basename(gcs_path)
             response_disposition = f'attachment; filename="{filename}"'
 

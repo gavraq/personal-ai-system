@@ -82,16 +82,23 @@ def deal_to_response(deal: Deal, file_count: int = 0) -> DealResponse:
 def get_deals_with_file_counts(db: Session, deal_ids: list[UUID]) -> dict[UUID, int]:
     """Batch query to get file counts for multiple deals in one query.
 
+    N+1 prevention optimization: Instead of querying file count per deal (N queries),
+    this issues a single GROUP BY query that returns all counts at once (1 query).
+
+    IMPORTANT: Deals with zero files will NOT appear in the result dict.
+    Callers must use .get(deal_id, 0) to handle missing entries.
+
     Args:
         db: Database session
         deal_ids: List of deal IDs to get file counts for
 
     Returns:
-        Dictionary mapping deal_id to file count
+        Dictionary mapping deal_id to file count (only deals with files included)
     """
     if not deal_ids:
         return {}
 
+    # Single query with GROUP BY instead of N individual COUNT queries
     result = db.query(
         File.deal_id,
         func.count(File.id).label('count')
@@ -173,9 +180,13 @@ async def list_deals(
     """
     offset = (page - 1) * page_size
 
-    # Build base query
+    # Authorization-driven query branching:
+    # - Admins: Query ALL deals directly (no join needed, sees everything)
+    # - Non-admins: JOIN with DealMember to filter to only their deals
+    # IMPORTANT: Any new filtering logic must be applied to BOTH branches
+    # to maintain consistency between admin and non-admin views.
     if current_user.role == UserRole.ADMIN.value:
-        # Admin can see all deals
+        # Admin can see all deals (no membership constraint)
         query = db.query(Deal)
     else:
         # Non-admin can only see deals they are members of
@@ -273,7 +284,13 @@ async def update_deal(
             detail="Closed deals cannot be edited"
         )
 
-    # Validate status transitions
+    # Status state machine validation: draft → active → closed (one-way progression)
+    # Business rules:
+    # - draft: Initial state, can move to active
+    # - active: Deal in progress, can move to closed
+    # - closed: Terminal state, no further transitions allowed
+    # Pydantic enum validation ensures only valid status VALUES can be sent (422 on invalid).
+    # THIS code validates transition RULES between valid statuses (400 on invalid transition).
     if request.status:
         current_status = deal.status
         new_status = request.status.value
@@ -281,7 +298,7 @@ async def update_deal(
         valid_transitions = {
             'draft': ['active'],
             'active': ['closed'],
-            'closed': []  # No transitions from closed
+            'closed': []  # Terminal state - no exits allowed
         }
 
         if new_status != current_status and new_status not in valid_transitions.get(current_status, []):
@@ -290,7 +307,9 @@ async def update_deal(
                 detail=f"Invalid status transition from {current_status} to {new_status}"
             )
 
-    # Track changes for activity log
+    # Change tracking for activity log: capture old vs new values BEFORE updating
+    # Only log fields that actually changed to prevent activity spam from no-op updates
+    # (e.g., user submits form without changes, or sends same value).
     changes = {}
     if request.title is not None and request.title != deal.title:
         changes["title"] = {"old": deal.title, "new": request.title}
@@ -302,7 +321,7 @@ async def update_deal(
         changes["status"] = {"old": deal.status, "new": request.status.value}
         deal.status = request.status.value
 
-    # Log activity if there were changes
+    # Only create activity entry if something actually changed
     if changes:
         log_activity(
             db=db,
@@ -436,7 +455,10 @@ async def add_deal_member(
     db.commit()
     db.refresh(member)
 
-    # Invalidate membership cache for the new member
+    # Invalidate membership cache AFTER commit succeeds.
+    # The new member's cached status (if any) must be cleared so the next permission
+    # check fetches fresh data from DB. Only invalidate THIS user's membership for
+    # THIS deal - other users' memberships are unaffected.
     invalidate_deal_membership_cache(deal_id, request.user_id)
 
     return DealMemberResponse(
@@ -482,14 +504,16 @@ async def list_deal_members(
     # Get total count
     total = db.query(DealMember).filter(DealMember.deal_id == deal_id).count()
 
-    # Get paginated members with eager loading of user relationship
+    # Eager load DealMember.user relationship to prevent N+1 query problem.
+    # Without joinedload: 1 query for members + N queries to get each member's user email
+    # With joinedload: 1 query with JOIN fetches all data at once
     members = db.query(DealMember).options(
         joinedload(DealMember.user)
     ).filter(
         DealMember.deal_id == deal_id
     ).order_by(DealMember.added_at.desc()).offset(offset).limit(page_size).all()
 
-    # Build response using eagerly loaded user data (no N+1)
+    # Build response using eagerly loaded user data (user.email already fetched above)
     member_responses = [
         DealMemberResponse(
             deal_id=m.deal_id,
@@ -547,7 +571,10 @@ async def remove_deal_member(
             detail="Cannot modify members of a closed deal"
         )
 
-    # Cannot remove the creator
+    # Business rule: Cannot remove deal creator to prevent orphaned deals.
+    # The creator serves as the "owner" - every deal must have at least this member.
+    # We check this in app code (not just FK constraint) to provide a clear 400 error
+    # rather than a cryptic database constraint violation.
     if deal.created_by == user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

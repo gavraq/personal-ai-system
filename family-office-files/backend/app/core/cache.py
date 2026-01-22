@@ -55,12 +55,19 @@ def _serialize_datetime(obj: Any) -> Any:
 
 
 def _deserialize_datetime(data: Dict[str, Any], datetime_fields: List[str]) -> Dict[str, Any]:
-    """Convert ISO format strings back to datetime objects."""
+    """Convert ISO format strings back to datetime objects.
+
+    Note: Silently passes on datetime parse failures (ValueError/TypeError) rather than
+    raising. This handles cases where datetime fields are null, missing, or in unexpected
+    formats. The data is returned with whatever could be parsed - degraded gracefully
+    rather than breaking cache retrieval entirely.
+    """
     for field in datetime_fields:
         if field in data and data[field]:
             try:
                 data[field] = datetime.fromisoformat(data[field])
             except (ValueError, TypeError):
+                # Silently skip unparseable datetimes to degrade gracefully
                 pass
     return data
 
@@ -88,7 +95,9 @@ def cache_user(user_id: UUID, user_data: Dict[str, Any]) -> bool:
         serialized = json.dumps(user_data, default=_serialize_datetime)
         client.setex(key, USER_CACHE_TTL, serialized)
 
-        # Also cache email-to-id mapping
+        # Maintain dual cache index: ID-based AND email-based lookups
+        # The email index (user_email:{email} -> user_id) is used during authentication
+        # when we only have the email from credentials. Both have same TTL to stay in sync.
         if "email" in user_data:
             email_key = f"user_email:{user_data['email']}"
             client.setex(email_key, USER_CACHE_TTL, str(user_id))
@@ -311,14 +320,19 @@ def invalidate_deal_membership_cache(deal_id: UUID, user_id: Optional[UUID] = No
             # Invalidate specific membership
             client.delete(f"deal_member:{deal_id}:{user_id}")
         else:
-            # Invalidate all memberships for the deal (pattern delete)
+            # Invalidate all memberships for the deal using Redis SCAN pattern delete.
+            # We use SCAN (not KEYS or DEL with pattern) because:
+            # 1. SCAN is non-blocking - won't freeze Redis on large datasets
+            # 2. SCAN returns cursor 0 when iteration is complete
+            # 3. count=100 is a hint for batch size, not a limit
+            # Must loop until cursor==0 to ensure ALL matching keys are deleted.
             pattern = f"deal_member:{deal_id}:*"
             cursor = 0
             while True:
                 cursor, keys = client.scan(cursor, match=pattern, count=100)
                 if keys:
                     client.delete(*keys)
-                if cursor == 0:
+                if cursor == 0:  # Iteration complete when cursor returns to 0
                     break
 
         return True
@@ -330,7 +344,11 @@ def invalidate_user_memberships_cache(user_id: UUID) -> bool:
     """
     Invalidate all deal membership cache entries for a user.
 
-    Use when user role changes (affects all deal permissions).
+    Use when user's global role changes - this affects permissions on ALL deals
+    they're a member of, so we must invalidate all their membership cache entries.
+
+    Pattern: deal_member:*:{user_id} (inverse of deal-based invalidation which uses
+    deal_member:{deal_id}:*). This finds all deals where this user is a member.
 
     Args:
         user_id: User UUID
@@ -341,7 +359,8 @@ def invalidate_user_memberships_cache(user_id: UUID) -> bool:
     try:
         client = get_cache_client()
 
-        # Pattern delete all memberships for this user
+        # Pattern delete all memberships for this user (inverse pattern from deal-based)
+        # Uses SCAN for non-blocking iteration (see invalidate_deal_membership_cache for details)
         pattern = f"deal_member:*:{user_id}"
         cursor = 0
         while True:
@@ -364,6 +383,12 @@ def get_cache_stats() -> Dict[str, Any]:
     """
     Get cache statistics for monitoring.
 
+    WARNING: Key counting via scan_iter()->list() is inefficient for large datasets.
+    In production with millions of cache keys, this endpoint will be slow because
+    it materializes all keys into memory before counting. Consider implementing
+    key counters in Redis (INCR on insert, DECR on delete) or using INFO command
+    for aggregate stats if this becomes a bottleneck.
+
     Returns:
         Dictionary with cache statistics
     """
@@ -372,7 +397,8 @@ def get_cache_stats() -> Dict[str, Any]:
         info = client.info("stats")
         keyspace = client.info("keyspace")
 
-        # Count keys by prefix
+        # Count keys by prefix - NOTE: This is O(n) and materializes all keys into memory
+        # See docstring warning about production performance implications
         user_keys = len(list(client.scan_iter("user:*", count=100)))
         deal_keys = len(list(client.scan_iter("deal:*", count=100)))
         membership_keys = len(list(client.scan_iter("deal_member:*", count=100)))

@@ -87,7 +87,10 @@ async def update_user_role(
             detail="User not found"
         )
 
-    # Prevent admin from demoting themselves if they're the only admin
+    # Safety guard: Prevent demoting the LAST admin to avoid system lockout.
+    # Only checks when an admin is demoting themselves (current_user.id == user_id).
+    # If this is the only admin and they try to demote themselves, reject.
+    # This ensures at least one admin always exists to manage the system.
     if current_user.id == user_id and request.role != UserRole.ADMIN:
         admin_count = db.query(User).filter(User.role == 'admin').count()
         if admin_count <= 1:
@@ -114,8 +117,11 @@ async def update_user_role(
     db.commit()
     db.refresh(user)
 
-    # Invalidate user cache and all their deal memberships
-    # (role change affects permissions on all deals)
+    # Dual cache invalidation required for role changes:
+    # 1. User cache: Role is part of user data, auth checks need fresh data
+    # 2. ALL deal memberships for this user: Role change affects permissions on
+    #    EVERY deal they're a member of. Can't rely on TTL - must be immediate
+    #    to prevent permission escalation/downgrade delays.
     invalidate_user_cache(user.id, user.email)
     invalidate_user_memberships_cache(user.id)
 
