@@ -25,6 +25,19 @@
 > # Then insert users into PostgreSQL
 > ```
 
+> **🤖 CLI Agent Note (2026-01-22):**
+> A Maestro-managed CLI agent reviewed this phase and confirmed it cannot be automated.
+> All remaining tasks in Phase 7 require:
+> 1. Human operator with Chrome browser
+> 2. Claude Browser Tool extension installed and configured
+> 3. Interactive visual testing capabilities
+>
+> **Next Steps for Human Tester:**
+> 1. Run `docker compose up -d` in the family-office-files directory
+> 2. Verify services at localhost:3000 (frontend) and localhost:8000 (backend)
+> 3. Create test users via database seeding
+> 4. Use Claude Browser Tool to complete each test section
+
 ## Pre-requisites
 - [x] All phases 1-6 complete (verified: Phases 1-6 have all core tasks complete, only deferred/optional items remain)
 - [ ] Docker services running *(requires manual: `docker compose up -d`)*
