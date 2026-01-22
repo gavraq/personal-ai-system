@@ -23,8 +23,8 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)  # ix_alerts_user_id
+    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=True, index=True)  # ix_alerts_deal_id
 
     # Alert configuration
     name = Column(String(255), nullable=False)
@@ -35,7 +35,7 @@ class Alert(Base):
         default=AlertFrequency.DAILY,
         nullable=False
     )
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)  # ix_alerts_is_active
 
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -56,7 +56,7 @@ class AlertMatch(Base):
     __tablename__ = "alert_matches"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    alert_id = Column(UUID(as_uuid=True), ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False)
+    alert_id = Column(UUID(as_uuid=True), ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False, index=True)  # ix_alert_matches_alert_id
 
     # Match details
     headline = Column(String(500), nullable=False)
@@ -69,7 +69,7 @@ class AlertMatch(Base):
     keywords_matched = Column(ARRAY(String), nullable=False, default=[])
 
     # Notification status
-    notified = Column(Boolean, default=False, nullable=False)
+    notified = Column(Boolean, default=False, nullable=False, index=True)  # ix_alert_matches_notified
     notified_at = Column(DateTime, nullable=True)
 
     # Timestamps

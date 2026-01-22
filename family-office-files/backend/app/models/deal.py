@@ -32,11 +32,12 @@ class Deal(Base):
     status = Column(
         deal_status_enum,
         default='draft',
-        nullable=False
+        nullable=False,
+        index=True  # ix_deals_status
     )
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)  # ix_deals_created_by
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)  # ix_deals_updated_at
 
     # Relationships
     creator = relationship("User", back_populates="deals_created", foreign_keys=[created_by])
@@ -53,9 +54,13 @@ class Deal(Base):
 class DealMember(Base):
     """Deal membership junction table"""
     __tablename__ = "deal_members"
+    __table_args__ = (
+        # Index for finding user's deal memberships
+        {"mysql_engine": "InnoDB"},
+    )
 
     deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     role_override = Column(String(20))  # NULL means use user's global role
     added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

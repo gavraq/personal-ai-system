@@ -35,7 +35,7 @@ class File(Base):
     __tablename__ = "files"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False)
+    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)  # ix_files_deal_id
     name = Column(String(255), nullable=False)
     source = Column(
         Enum(FileSource, name="file_source", values_callable=lambda x: [e.value for e in x], create_constraint=False),
@@ -59,9 +59,13 @@ class File(Base):
 class FileShare(Base):
     """File sharing permissions table"""
     __tablename__ = "file_shares"
+    __table_args__ = (
+        # Index for finding files shared with a user
+        {"mysql_engine": "InnoDB"},
+    )
 
     file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), primary_key=True)
-    shared_with = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    shared_with = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     permission = Column(
         Enum(FilePermission, name="file_permission", values_callable=lambda x: [e.value for e in x], create_constraint=False),
         default=FilePermission.VIEW,

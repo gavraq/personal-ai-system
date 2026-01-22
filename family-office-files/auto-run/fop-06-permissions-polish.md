@@ -68,7 +68,7 @@
 
 ## 6.6 Performance & Optimization
 
-- [ ] Add database indexes for common queries
+- [x] Add database indexes for common queries ✓ Created alembic/versions/002_add_performance_indexes.py with 13 new indexes: deal_members.user_id, file_shares.shared_with, audit_log.actor_id/action, activity.actor_id/action, agent_runs.user_id, deals.updated_at, alerts.user_id/deal_id/is_active, alert_matches.alert_id/notified
 - [ ] Implement pagination on all list endpoints
 - [ ] Add Redis caching for frequently accessed data
 - [ ] Optimize N+1 queries with eager loading

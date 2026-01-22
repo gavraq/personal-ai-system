@@ -39,8 +39,8 @@ class AgentRun(Base):
     __tablename__ = "agent_runs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    deal_id = Column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)  # ix_agent_runs_deal_id
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)  # ix_agent_runs_user_id
     agent_type = Column(
         Enum(AgentType, name="agent_type", create_constraint=True),
         nullable=False
@@ -50,7 +50,8 @@ class AgentRun(Base):
     status = Column(
         Enum(AgentStatus, name="agent_status", create_constraint=True),
         default=AgentStatus.PENDING,
-        nullable=False
+        nullable=False,
+        index=True  # ix_agent_runs_status
     )
     error_message = Column(Text)
     started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
