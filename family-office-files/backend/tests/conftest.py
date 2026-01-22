@@ -73,6 +73,15 @@ def test_redis():
             redis_client.delete(key)
         for key in redis_client.scan_iter("user_blacklist:*"):
             redis_client.delete(key)
+        # Clear cache keys
+        for key in redis_client.scan_iter("user:*"):
+            redis_client.delete(key)
+        for key in redis_client.scan_iter("user_email:*"):
+            redis_client.delete(key)
+        for key in redis_client.scan_iter("deal:*"):
+            redis_client.delete(key)
+        for key in redis_client.scan_iter("deal_member:*"):
+            redis_client.delete(key)
         yield redis_client
     except redis.RedisError:
         # Redis not available, skip cleanup

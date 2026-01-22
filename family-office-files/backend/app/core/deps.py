@@ -10,10 +10,49 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .security import verify_token
+from .cache import get_cached_user, cache_user
 from ..models.user import User, UserRole
 
 # HTTP Bearer token extraction
 security = HTTPBearer()
+
+
+def _get_user_with_cache(db: Session, user_id: UUID) -> Optional[User]:
+    """
+    Get user by ID with Redis cache.
+
+    First checks cache, falls back to database if not cached.
+    Caches the result on database hit.
+
+    Args:
+        db: Database session
+        user_id: User UUID
+
+    Returns:
+        User object or None if not found
+    """
+    # Try cache first
+    cached = get_cached_user(user_id)
+    if cached:
+        # Reconstruct User object from cached data
+        # Note: We still need to attach to session for SQLAlchemy to work
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+
+    # Cache miss - fetch from database
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user:
+        # Cache the user data
+        cache_user(user_id, {
+            "id": str(user.id),
+            "email": user.email,
+            "role": user.role,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
+        })
+
+    return user
 
 
 def require_role(allowed_roles: List[UserRole]):
@@ -58,7 +97,7 @@ def require_role(allowed_roles: List[UserRole]):
         except ValueError:
             raise credentials_exception
 
-        user = db.query(User).filter(User.id == user_id).first()
+        user = _get_user_with_cache(db, user_id)
         if user is None:
             raise credentials_exception
 
@@ -112,7 +151,7 @@ async def get_current_user(
     except ValueError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = _get_user_with_cache(db, user_id)
     if user is None:
         raise credentials_exception
 

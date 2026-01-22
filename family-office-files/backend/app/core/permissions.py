@@ -17,6 +17,10 @@ from sqlalchemy.orm import Session
 
 from ..models.user import User, UserRole
 from ..models.deal import Deal, DealMember
+from .cache import (
+    get_cached_deal_membership,
+    cache_deal_membership,
+)
 
 
 class RoleLevel(IntEnum):
@@ -76,6 +80,50 @@ def is_viewer(user: User) -> bool:
     return user.role == UserRole.VIEWER.value
 
 
+def _get_deal_membership_with_cache(db: Session, deal_id: UUID, user_id: UUID) -> Optional[DealMember]:
+    """
+    Get deal membership with Redis cache.
+
+    First checks cache, falls back to database if not cached.
+    Caches the result on database hit.
+
+    Args:
+        db: Database session
+        deal_id: Deal UUID
+        user_id: User UUID
+
+    Returns:
+        DealMember object or None if not a member
+    """
+    # Try cache first
+    cached = get_cached_deal_membership(deal_id, user_id)
+    if cached is not None:
+        if not cached["is_member"]:
+            return None
+        # We have membership info cached - still need to fetch from DB for SQLAlchemy
+        membership = db.query(DealMember).filter(
+            DealMember.deal_id == deal_id,
+            DealMember.user_id == user_id
+        ).first()
+        return membership
+
+    # Cache miss - fetch from database
+    membership = db.query(DealMember).filter(
+        DealMember.deal_id == deal_id,
+        DealMember.user_id == user_id
+    ).first()
+
+    # Cache the result
+    cache_deal_membership(
+        deal_id,
+        user_id,
+        is_member=membership is not None,
+        role_override=membership.role_override if membership else None
+    )
+
+    return membership
+
+
 def get_effective_deal_role(db: Session, deal: Deal, user: User) -> str:
     """
     Get user's effective role for a specific deal.
@@ -97,11 +145,8 @@ def get_effective_deal_role(db: Session, deal: Deal, user: User) -> str:
     if user.role == UserRole.ADMIN.value:
         return UserRole.ADMIN.value
 
-    # Check for deal membership with role override
-    membership = db.query(DealMember).filter(
-        DealMember.deal_id == deal.id,
-        DealMember.user_id == user.id
-    ).first()
+    # Check for deal membership with role override (using cache)
+    membership = _get_deal_membership_with_cache(db, deal.id, user.id)
 
     if membership and membership.role_override:
         return membership.role_override
@@ -119,10 +164,9 @@ def can_read_deal(db: Session, deal: Deal, user: User) -> bool:
     if user.role == UserRole.ADMIN.value:
         return True
 
-    return db.query(DealMember).filter(
-        DealMember.deal_id == deal.id,
-        DealMember.user_id == user.id
-    ).first() is not None
+    # Use cached membership lookup
+    membership = _get_deal_membership_with_cache(db, deal.id, user.id)
+    return membership is not None
 
 
 def can_write_deal(db: Session, deal: Deal, user: User) -> bool:

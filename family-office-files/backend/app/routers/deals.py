@@ -34,6 +34,10 @@ from ..schemas.deal import (
 )
 from .activity import log_activity
 from ..core.audit import log_deal_membership_change, log_deal_role_override, AuditAction
+from ..core.cache import (
+    invalidate_deal_cache,
+    invalidate_deal_membership_cache,
+)
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
 
@@ -400,6 +404,9 @@ async def add_deal_member(
     db.commit()
     db.refresh(member)
 
+    # Invalidate membership cache for the new member
+    invalidate_deal_membership_cache(deal_id, request.user_id)
+
     return DealMemberResponse(
         deal_id=member.deal_id,
         user_id=member.user_id,
@@ -550,3 +557,6 @@ async def remove_deal_member(
 
     db.delete(member)
     db.commit()
+
+    # Invalidate membership cache for the removed member
+    invalidate_deal_membership_cache(deal_id, user_id)

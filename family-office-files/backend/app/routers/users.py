@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.deps import require_admin
 from ..core.audit import log_role_change
+from ..core.cache import invalidate_user_cache, invalidate_user_memberships_cache
 from ..models.user import User, UserRole
 from ..schemas.user import RoleUpdateRequest, UserResponse, UserListResponse
 
@@ -112,5 +113,10 @@ async def update_user_role(
 
     db.commit()
     db.refresh(user)
+
+    # Invalidate user cache and all their deal memberships
+    # (role change affects permissions on all deals)
+    invalidate_user_cache(user.id, user.email)
+    invalidate_user_memberships_cache(user.id)
 
     return user
