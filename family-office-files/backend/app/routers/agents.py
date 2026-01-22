@@ -605,6 +605,8 @@ async def create_alert(
 
 @router.get("/alerts", response_model=AlertListResponse)
 async def list_alerts(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     include_inactive: bool = Query(False, description="Include inactive alerts"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -612,18 +614,28 @@ async def list_alerts(
     """
     List all alerts for the current user.
 
+    - **page**: Page number (default 1)
+    - **page_size**: Items per page (default 20, max 100)
     - **include_inactive**: Whether to include inactive alerts (default: false)
     """
+    offset = (page - 1) * page_size
+
     query = db.query(Alert).filter(Alert.user_id == current_user.id)
 
     if not include_inactive:
         query = query.filter(Alert.is_active == True)
 
-    alerts = query.order_by(Alert.created_at.desc()).all()
+    # Get total count
+    total = query.count()
+
+    # Apply pagination
+    alerts = query.order_by(Alert.created_at.desc()).offset(offset).limit(page_size).all()
 
     return AlertListResponse(
         alerts=[alert_to_response(a) for a in alerts],
-        total=len(alerts)
+        total=total,
+        page=page,
+        page_size=page_size
     )
 
 
@@ -790,7 +802,9 @@ async def list_alert_matches(
             )
             for m in matches
         ],
-        total=total
+        total=total,
+        page=page,
+        page_size=page_size
     )
 
 

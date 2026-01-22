@@ -1675,3 +1675,221 @@ class TestDealLevelPermissions:
             headers={"Authorization": f"Bearer {partner_token}"}
         )
         assert activity_response.status_code == 403
+
+
+class TestDealMembersPagination:
+    """Tests for deal members list endpoint pagination"""
+
+    def test_list_members_pagination_params(self, client, test_db):
+        """List members supports page and page_size parameters"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_pag1@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_pag1@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Pagination Test Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # List members with pagination params
+        response = client.get(
+            f"/api/deals/{deal_id}/members?page=1&page_size=10",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "members" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+
+    def test_list_members_default_pagination(self, client, test_db):
+        """List members uses default pagination when not specified"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_pag2@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_pag2@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Default Pagination Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # List members without pagination params
+        response = client.get(
+            f"/api/deals/{deal_id}/members",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 20  # default
+
+    def test_list_members_pagination_with_multiple_members(self, client, test_db):
+        """List members pagination works with multiple members"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+
+        # Create admin
+        admin = User(
+            email="admin_pag3@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+
+        # Create 5 additional users
+        users = []
+        for i in range(5):
+            user = User(
+                email=f"user_pag3_{i}@test.com",
+                password_hash=get_password_hash("password123"),
+                role="viewer"
+            )
+            db.add(user)
+            users.append(user)
+
+        db.commit()
+        db.refresh(admin)
+        for u in users:
+            db.refresh(u)
+
+        # Login as admin
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_pag3@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Multi-member Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Add all users as members
+        for user in users:
+            client.post(
+                f"/api/deals/{deal_id}/members",
+                json={"user_id": str(user.id)},
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+        # Get first page with page_size=2
+        response = client.get(
+            f"/api/deals/{deal_id}/members?page=1&page_size=2",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["members"]) == 2
+        assert data["total"] == 6  # admin + 5 users
+        assert data["page"] == 1
+        assert data["page_size"] == 2
+
+        # Get second page
+        response2 = client.get(
+            f"/api/deals/{deal_id}/members?page=2&page_size=2",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert len(data2["members"]) == 2
+        assert data2["total"] == 6
+        assert data2["page"] == 2
+
+        # Get third page
+        response3 = client.get(
+            f"/api/deals/{deal_id}/members?page=3&page_size=2",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response3.status_code == 200
+        data3 = response3.json()
+        assert len(data3["members"]) == 2
+        assert data3["total"] == 6
+        assert data3["page"] == 3
+
+    def test_list_members_pagination_empty_page(self, client, test_db):
+        """List members returns empty list for page beyond data"""
+        from app.core.database import get_db
+
+        db = next(client.app.dependency_overrides[get_db]())
+        admin = User(
+            email="admin_pag4@test.com",
+            password_hash=get_password_hash("password123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
+
+        # Login
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin_pag4@test.com", "password": "password123"}
+        )
+        token = login_response.json()["access_token"]
+
+        # Create deal (only admin as member)
+        create_response = client.post(
+            "/api/deals",
+            json={"title": "Empty Page Deal"},
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        deal_id = create_response.json()["id"]
+
+        # Request page 10 (way beyond data)
+        response = client.get(
+            f"/api/deals/{deal_id}/members?page=10&page_size=20",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["members"]) == 0
+        assert data["total"] == 1  # just admin
+        assert data["page"] == 10
+        assert data["page_size"] == 20

@@ -412,14 +412,21 @@ async def add_deal_member(
 @router.get("/{deal_id}/members", response_model=DealMemberListResponse)
 async def list_deal_members(
     deal_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List all members of a deal.
 
+    - **page**: Page number (default 1)
+    - **page_size**: Items per page (default 20, max 100)
+
     User must be a deal member or admin to view members.
     """
+    offset = (page - 1) * page_size
+
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if deal is None:
         raise HTTPException(
@@ -433,7 +440,13 @@ async def list_deal_members(
             detail="You do not have access to this deal"
         )
 
-    members = db.query(DealMember).filter(DealMember.deal_id == deal_id).all()
+    # Get total count
+    total = db.query(DealMember).filter(DealMember.deal_id == deal_id).count()
+
+    # Get paginated members
+    members = db.query(DealMember).filter(
+        DealMember.deal_id == deal_id
+    ).order_by(DealMember.added_at.desc()).offset(offset).limit(page_size).all()
 
     # Get user emails for response
     from ..models.user import User as UserModel
@@ -450,7 +463,9 @@ async def list_deal_members(
 
     return DealMemberListResponse(
         members=member_responses,
-        total=len(members)
+        total=total,
+        page=page,
+        page_size=page_size
     )
 
 

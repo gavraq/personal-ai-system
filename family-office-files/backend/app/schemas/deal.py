@@ -37,6 +37,7 @@ class DealResponse(BaseModel):
     created_by: UUID
     created_at: datetime
     updated_at: Optional[datetime]
+    file_count: int = 0
 
     model_config = {
         "from_attributes": True
@@ -74,6 +75,8 @@ class DealMemberResponse(BaseModel):
 
 
 class DealMemberListResponse(BaseModel):
-    """Schema for deal member list response"""
+    """Schema for paginated deal member list response"""
     members: List[DealMemberResponse]
     total: int
+    page: int
+    page_size: int

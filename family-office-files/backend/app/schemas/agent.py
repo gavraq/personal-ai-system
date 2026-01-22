@@ -134,6 +134,8 @@ class AlertListResponse(BaseModel):
     """Response schema for alert list"""
     alerts: list[AlertResponse]
     total: int
+    page: int
+    page_size: int
 
 
 class AlertMatchResponse(BaseModel):
@@ -156,6 +158,8 @@ class AlertMatchResponse(BaseModel):
 
 
 class AlertMatchListResponse(BaseModel):
-    """Response schema for alert matches list"""
+    """Response schema for paginated alert matches list"""
     matches: list[AlertMatchResponse]
     total: int
+    page: int
+    page_size: int
