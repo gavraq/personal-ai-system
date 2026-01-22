@@ -4,11 +4,32 @@
 **Priority**: P3 - Verification
 **Depends on**: All previous phases complete
 
+> **⚠️ IMPORTANT: Manual Testing Phase**
+>
+> This phase requires the **Claude Browser Tool Chrome Extension** for interactive browser testing.
+> CLI-based agents cannot perform these tasks - they require a human with:
+> - A Chrome browser with Claude Browser Tool installed
+> - Docker services running locally
+> - Access to the test environment at localhost:3000/8000
+>
+> **To start the environment:**
+> ```bash
+> cd /Users/gavinslater/projects/life/family-office-files
+> docker compose up -d
+> ```
+>
+> **To create test users (after services are up):**
+> ```bash
+> # Run from backend container or with proper Python environment
+> python -c "from app.core.security import get_password_hash; print(get_password_hash('testpassword123'))"
+> # Then insert users into PostgreSQL
+> ```
+
 ## Pre-requisites
 - [x] All phases 1-6 complete (verified: Phases 1-6 have all core tasks complete, only deferred/optional items remain)
-- [ ] Docker services running
-- [ ] Claude Browser Tool extension installed
-- [ ] Test user accounts created (admin, partner, viewer)
+- [ ] Docker services running *(requires manual: `docker compose up -d`)*
+- [ ] Claude Browser Tool extension installed *(requires Chrome browser with extension)*
+- [ ] Test user accounts created (admin, partner, viewer) *(requires database seeding)*
 
 ## Test Environment Setup
 
