@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File as FastAPIFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..core.database import get_db
 from ..core.deps import get_current_user
@@ -343,6 +343,8 @@ async def upload_file(
 @router.get("/deals/{deal_id}/files", response_model=FileListResponse)
 async def list_deal_files(
     deal_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     source: Optional[str] = Query(None, description="Filter by source (drive or gcs)"),
     search: Optional[str] = Query(None, description="Search files by name (case-insensitive partial match)"),
     sort_by: Optional[str] = Query("date", description="Sort by: name, date, type"),
@@ -353,6 +355,8 @@ async def list_deal_files(
     """
     List all files associated with a deal.
 
+    - **page**: Page number (default 1)
+    - **page_size**: Items per page (default 20, max 100)
     - **source**: Filter by source type (drive or gcs)
     - **search**: Search files by name (case-insensitive partial match)
     - **sort_by**: Sort by field (name, date, type). Defaults to date.
@@ -360,6 +364,8 @@ async def list_deal_files(
 
     User must be a deal member or admin.
     """
+    offset = (page - 1) * page_size
+
     # Get the deal
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if deal is None:
@@ -389,6 +395,9 @@ async def list_deal_files(
     if search:
         query = query.filter(File.name.ilike(f"%{search}%"))
 
+    # Get total count before pagination
+    total = query.count()
+
     # Determine sort column
     sort_column = File.created_at  # default
     if sort_by == "name":
@@ -404,11 +413,14 @@ async def list_deal_files(
     else:
         query = query.order_by(sort_column.desc())
 
-    files = query.all()
+    # Apply pagination
+    files = query.offset(offset).limit(page_size).all()
 
     return FileListResponse(
         files=[FileResponse.model_validate(f) for f in files],
-        total=len(files)
+        total=total,
+        page=page,
+        page_size=page_size
     )
 
 
@@ -725,40 +737,55 @@ async def revoke_file_share(
 
 @router.get("/files/shared", response_model=SharedFileListResponse)
 async def list_shared_files(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     List all files shared with the current user.
 
+    - **page**: Page number (default 1)
+    - **page_size**: Items per page (default 20, max 100)
+
     Returns files that have been explicitly shared with the user via file shares,
     along with the permission level granted.
     """
-    # Get all file shares for the current user
-    shares = db.query(FileShare).filter(
-        FileShare.shared_with == current_user.id
-    ).all()
+    offset = (page - 1) * page_size
 
-    # Build response with file details and share info
-    shared_files = []
-    for share in shares:
-        file = db.query(File).filter(File.id == share.file_id).first()
-        if file:
-            shared_files.append(SharedFileResponse(
-                id=file.id,
-                deal_id=file.deal_id,
-                name=file.name,
-                source=file.source.value,
-                source_id=file.source_id,
-                mime_type=file.mime_type,
-                size_bytes=file.size_bytes,
-                uploaded_by=file.uploaded_by,
-                created_at=file.created_at,
-                permission=share.permission.value,
-                shared_at=share.shared_at
-            ))
+    # Get total count of file shares for the current user
+    total = db.query(FileShare).filter(
+        FileShare.shared_with == current_user.id
+    ).count()
+
+    # Get paginated file shares with eager loading of file relationship (avoids N+1)
+    shares = db.query(FileShare).options(
+        joinedload(FileShare.file)
+    ).filter(
+        FileShare.shared_with == current_user.id
+    ).order_by(FileShare.shared_at.desc()).offset(offset).limit(page_size).all()
+
+    # Build response using eagerly loaded file data (no N+1)
+    shared_files = [
+        SharedFileResponse(
+            id=share.file.id,
+            deal_id=share.file.deal_id,
+            name=share.file.name,
+            source=share.file.source.value,
+            source_id=share.file.source_id,
+            mime_type=share.file.mime_type,
+            size_bytes=share.file.size_bytes,
+            uploaded_by=share.file.uploaded_by,
+            created_at=share.file.created_at,
+            permission=share.permission.value,
+            shared_at=share.shared_at
+        )
+        for share in shares if share.file
+    ]
 
     return SharedFileListResponse(
         files=shared_files,
-        total=len(shared_files)
+        total=total,
+        page=page,
+        page_size=page_size
     )

@@ -5,7 +5,7 @@ from uuid import UUID
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from sqlalchemy import func
 
@@ -60,8 +60,13 @@ def get_deal_file_count(db: Session, deal_id: UUID) -> int:
     return db.query(func.count(File.id)).filter(File.deal_id == deal_id).scalar() or 0
 
 
-def deal_to_response(db: Session, deal: Deal) -> DealResponse:
-    """Convert Deal model to DealResponse with file_count"""
+def deal_to_response(deal: Deal, file_count: int = 0) -> DealResponse:
+    """Convert Deal model to DealResponse with file_count
+
+    Args:
+        deal: Deal model instance
+        file_count: Pre-computed file count (to avoid N+1 queries)
+    """
     return DealResponse(
         id=deal.id,
         title=deal.title,
@@ -70,8 +75,31 @@ def deal_to_response(db: Session, deal: Deal) -> DealResponse:
         created_by=deal.created_by,
         created_at=deal.created_at,
         updated_at=deal.updated_at,
-        file_count=get_deal_file_count(db, deal.id)
+        file_count=file_count
     )
+
+
+def get_deals_with_file_counts(db: Session, deal_ids: list[UUID]) -> dict[UUID, int]:
+    """Batch query to get file counts for multiple deals in one query.
+
+    Args:
+        db: Database session
+        deal_ids: List of deal IDs to get file counts for
+
+    Returns:
+        Dictionary mapping deal_id to file count
+    """
+    if not deal_ids:
+        return {}
+
+    result = db.query(
+        File.deal_id,
+        func.count(File.id).label('count')
+    ).filter(
+        File.deal_id.in_(deal_ids)
+    ).group_by(File.deal_id).all()
+
+    return {row.deal_id: row.count for row in result}
 
 
 @router.post("", response_model=DealResponse, status_code=status.HTTP_201_CREATED)
@@ -126,7 +154,7 @@ async def create_deal(
     db.commit()
     db.refresh(deal)
 
-    return deal_to_response(db, deal)
+    return deal_to_response(deal, get_deal_file_count(db, deal.id))
 
 
 @router.get("", response_model=DealListResponse)
@@ -168,8 +196,12 @@ async def list_deals(
         Deal.created_at.desc()
     ).offset(offset).limit(page_size).all()
 
+    # Batch query file counts to avoid N+1
+    deal_ids = [d.id for d in deals]
+    file_counts = get_deals_with_file_counts(db, deal_ids)
+
     return DealListResponse(
-        deals=[deal_to_response(db, d) for d in deals],
+        deals=[deal_to_response(d, file_counts.get(d.id, 0)) for d in deals],
         total=total,
         page=page,
         page_size=page_size
@@ -200,7 +232,7 @@ async def get_deal(
             detail="You do not have access to this deal"
         )
 
-    return deal_to_response(db, deal)
+    return deal_to_response(deal, get_deal_file_count(db, deal.id))
 
 
 @router.put("/{deal_id}", response_model=DealResponse)
@@ -283,7 +315,7 @@ async def update_deal(
     db.commit()
     db.refresh(deal)
 
-    return deal_to_response(db, deal)
+    return deal_to_response(deal, get_deal_file_count(db, deal.id))
 
 
 @router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -450,23 +482,24 @@ async def list_deal_members(
     # Get total count
     total = db.query(DealMember).filter(DealMember.deal_id == deal_id).count()
 
-    # Get paginated members
-    members = db.query(DealMember).filter(
+    # Get paginated members with eager loading of user relationship
+    members = db.query(DealMember).options(
+        joinedload(DealMember.user)
+    ).filter(
         DealMember.deal_id == deal_id
     ).order_by(DealMember.added_at.desc()).offset(offset).limit(page_size).all()
 
-    # Get user emails for response
-    from ..models.user import User as UserModel
-    member_responses = []
-    for m in members:
-        user = db.query(UserModel).filter(UserModel.id == m.user_id).first()
-        member_responses.append(DealMemberResponse(
+    # Build response using eagerly loaded user data (no N+1)
+    member_responses = [
+        DealMemberResponse(
             deal_id=m.deal_id,
             user_id=m.user_id,
             role_override=m.role_override,
             added_at=m.added_at,
-            user_email=user.email if user else None
-        ))
+            user_email=m.user.email if m.user else None
+        )
+        for m in members
+    ]
 
     return DealMemberListResponse(
         members=member_responses,

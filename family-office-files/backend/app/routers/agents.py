@@ -46,14 +46,18 @@ def get_user_accessible_deal_ids(db: Session, user: User) -> list[UUID]:
         return [m.deal_id for m in memberships]
 
 
-def agent_run_to_response(db: Session, run: AgentRun) -> AgentRunResponse:
-    """Convert AgentRun model to AgentRunResponse with user email"""
-    user = db.query(User).filter(User.id == run.user_id).first()
+def agent_run_to_response(run: AgentRun, user_email: str = None) -> AgentRunResponse:
+    """Convert AgentRun model to AgentRunResponse with user email
+
+    Args:
+        run: AgentRun model instance
+        user_email: Pre-loaded user email (to avoid N+1 queries)
+    """
     return AgentRunResponse(
         id=run.id,
         deal_id=run.deal_id,
         user_id=run.user_id,
-        user_email=user.email if user else None,
+        user_email=user_email,
         agent_type=run.agent_type,
         status=run.status,
         input=run.input or {},
@@ -143,11 +147,13 @@ async def list_agent_runs(
     # Get total count
     total = query.count()
 
-    # Get paginated runs, sorted by most recent first
-    runs = query.order_by(AgentRun.started_at.desc()).offset(offset).limit(page_size).all()
+    # Get paginated runs with eager loading of user relationship
+    runs = query.options(
+        joinedload(AgentRun.user)
+    ).order_by(AgentRun.started_at.desc()).offset(offset).limit(page_size).all()
 
     return AgentRunListResponse(
-        runs=[agent_run_to_response(db, r) for r in runs],
+        runs=[agent_run_to_response(r, r.user.email if r.user else None) for r in runs],
         total=total,
         page=page,
         page_size=page_size
@@ -165,7 +171,9 @@ async def get_agent_run(
 
     User must be a deal member or admin to view the run.
     """
-    run = db.query(AgentRun).filter(AgentRun.id == run_id).first()
+    run = db.query(AgentRun).options(
+        joinedload(AgentRun.user)
+    ).filter(AgentRun.id == run_id).first()
     if not run:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -184,7 +192,7 @@ async def get_agent_run(
                 detail="You do not have access to this agent run"
             )
 
-    return agent_run_to_response(db, run)
+    return agent_run_to_response(run, run.user.email if run.user else None)
 
 
 @router.get("/summaries", response_model=AgentSummaryListResponse)
@@ -302,11 +310,13 @@ async def list_deal_agent_runs(
     # Get total count
     total = query.count()
 
-    # Get paginated runs
-    runs = query.order_by(AgentRun.started_at.desc()).offset(offset).limit(page_size).all()
+    # Get paginated runs with eager loading of user relationship
+    runs = query.options(
+        joinedload(AgentRun.user)
+    ).order_by(AgentRun.started_at.desc()).offset(offset).limit(page_size).all()
 
     return AgentRunListResponse(
-        runs=[agent_run_to_response(db, r) for r in runs],
+        runs=[agent_run_to_response(r, r.user.email if r.user else None) for r in runs],
         total=total,
         page=page,
         page_size=page_size

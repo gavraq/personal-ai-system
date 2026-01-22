@@ -5,7 +5,7 @@ from uuid import UUID
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from ..core.database import get_db
@@ -35,14 +35,18 @@ def get_user_accessible_deal_ids(db: Session, user: User) -> list[UUID]:
         return [m.deal_id for m in memberships]
 
 
-def activity_to_response(db: Session, activity: Activity) -> ActivityResponse:
-    """Convert Activity model to ActivityResponse with actor email"""
-    actor = db.query(User).filter(User.id == activity.actor_id).first()
+def activity_to_response(activity: Activity, actor_email: str = None) -> ActivityResponse:
+    """Convert Activity model to ActivityResponse with actor email
+
+    Args:
+        activity: Activity model instance
+        actor_email: Pre-loaded actor email (to avoid N+1 queries)
+    """
     return ActivityResponse(
         id=activity.id,
         deal_id=activity.deal_id,
         actor_id=activity.actor_id,
-        actor_email=actor.email if actor else None,
+        actor_email=actor_email,
         action=activity.action,
         details=activity.details,
         created_at=activity.created_at
@@ -100,11 +104,13 @@ async def list_activity(
     # Get total count
     total = query.count()
 
-    # Get paginated activities, sorted by most recent first
-    activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(page_size).all()
+    # Get paginated activities with eager loading of actor relationship
+    activities = query.options(
+        joinedload(Activity.actor)
+    ).order_by(Activity.created_at.desc()).offset(offset).limit(page_size).all()
 
     return ActivityListResponse(
-        activities=[activity_to_response(db, a) for a in activities],
+        activities=[activity_to_response(a, a.actor.email if a.actor else None) for a in activities],
         total=total,
         page=page,
         page_size=page_size
@@ -156,11 +162,13 @@ async def list_deal_activity(
     # Get total count
     total = query.count()
 
-    # Get paginated activities, sorted by most recent first
-    activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(page_size).all()
+    # Get paginated activities with eager loading of actor relationship
+    activities = query.options(
+        joinedload(Activity.actor)
+    ).order_by(Activity.created_at.desc()).offset(offset).limit(page_size).all()
 
     return ActivityListResponse(
-        activities=[activity_to_response(db, a) for a in activities],
+        activities=[activity_to_response(a, a.actor.email if a.actor else None) for a in activities],
         total=total,
         page=page,
         page_size=page_size
